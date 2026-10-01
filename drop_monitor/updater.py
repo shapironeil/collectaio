@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import logging
+import time
 import os
 import re
 import shutil
@@ -53,6 +54,7 @@ class Updater:
         info = read_install_info(self.root)
         self.branch = os.environ.get("DROP_MONITOR_BRANCH") or info.get("branch") or DEFAULT_BRANCH
         self.installed_commit = info.get("commit", "-")
+        self.last_changed: list[str] = []
         self.token = token or os.environ.get("GITHUB_TOKEN") or ""
         headers = {"User-Agent": "collectaio-updater", "Accept": "application/vnd.github+json"}
         if self.token:
@@ -93,7 +95,7 @@ class Updater:
             with zipfile.ZipFile(io.BytesIO(r.content)) as z:
                 z.extractall(tmp)
             src = next(Path(tmp).iterdir())
-            changed = _sync_tree(src, self.root)
+            changed, self.last_changed = _sync_tree(src, self.root)
         write_install_info(self.root, commit=info["latest"], branch=self.branch, app_version=info.get("remote_version", __version__),
                            updated_at=datetime.now().isoformat(timespec="seconds"))
         pip_out = ""
@@ -107,14 +109,21 @@ class Updater:
             except Exception as e:  # pragma: no cover
                 return {"ok": False, "error": f"pip: {e}", "changed": changed}
         log.info("updated to %s (%d files changed)", info["latest"], changed)
-        return {"ok": True, "installed": info["latest"], "changed": changed, "pip": pip_out, "restart_required": True}
+        try:
+            (self.root / "data").mkdir(exist_ok=True)
+            with (self.root / "data" / "update.log").open("a", encoding="utf-8") as f:
+                f.write(f"{datetime.now().isoformat(timespec='seconds')} {self.installed_commit} -> {info['latest']} files={changed} changed={self.last_changed[:20]}\n")
+        except OSError:
+            pass
+        return {"ok": True, "installed": info["latest"], "changed": changed, "files": self.last_changed[:40], "pip": pip_out, "restart_required": True}
 
     def close(self) -> None:
         self._client.close()
 
 
-def _sync_tree(src: Path, dst: Path) -> int:
+def _sync_tree(src: Path, dst: Path) -> tuple[int, list[str]]:
     changed = 0
+    names: list[str] = []
     for path in src.rglob("*"):
         rel = path.relative_to(src)
         parts = rel.parts
@@ -129,13 +138,18 @@ def _sync_tree(src: Path, dst: Path) -> int:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
             changed += 1
-    return changed
+            names.append(str(rel))
+    return changed, names
 
 
 def restart_app() -> None:
-    """Replace this process with a fresh one (same interpreter and arguments)."""
-    log.info("restarting: %s %s", sys.executable, sys.argv)
+    """Start a fresh `python -m drop_monitor <same args>` from the install root, then exit this one."""
+    args = [sys.executable, "-m", "drop_monitor", *sys.argv[1:]]
+    root = str(install_root())
+    log.info("restarting: %s (cwd %s)", " ".join(args), root)
     if os.name == "nt":
-        subprocess.Popen([sys.executable, *sys.argv], cwd=os.getcwd(), creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+        subprocess.Popen(args, cwd=root, creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+        time.sleep(1.0)
         os._exit(0)
-    os.execv(sys.executable, [sys.executable, *sys.argv])
+    os.chdir(root)
+    os.execv(sys.executable, args)

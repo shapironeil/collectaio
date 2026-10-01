@@ -67,7 +67,11 @@ class UIState:
         if self.controller is not None:
             self.cfg = self.controller.cfg
         ok, msg = check_health(self.cfg.storage.health_path, self.cfg.storage.health_max_age_seconds)
+        from drop_monitor.updater import install_root, read_install_info
+
+        info = read_install_info(install_root())
         return {
+            "build": {"commit": info.get("commit", "-"), "branch": info.get("branch", "-"), "updated_at": info.get("updated_at") or info.get("installed_at", "")},
             "controller": self.controller.status() if self.controller else None,
             "version": __version__,
             "site": self.site,
@@ -187,6 +191,76 @@ class UIState:
             self.controller.reload()
             self.cfg = self.controller.cfg
         return {"product": {"title": prod.title, "url": prod.url, "price": prod.price, "availability": prod.availability.value, "id": prod.product_id}, "task": task, "config": out}
+
+    # ---- browser registration ------------------------------------------------
+    def _registrar(self):
+        from drop_monitor.browser import BrowserRegistrar
+
+        if getattr(self, "registrar", None) is None:
+            base = Path(self.cfg.path).parent if self.cfg.path else Path(".")
+            self.registrar = BrowserRegistrar(self.site, self.profiles, base / "personal" / "sessions", base / "data" / "browser")
+        return self.registrar
+
+    def browser_check(self) -> dict:
+        from drop_monitor.browser import playwright_status
+
+        return playwright_status()
+
+    def browser_install(self) -> dict:
+        from drop_monitor.browser import install_browser
+
+        if getattr(self, "_install_thread", None) and self._install_thread.is_alive():
+            return {"ok": True, "running": True, "log": self._install_log}
+        self._install_log = "installazione in corso…"
+
+        def run():
+            res = install_browser()
+            self._install_log = ("OK\n" if res["ok"] else "ERRORE\n") + res["log"]
+
+        self._install_thread = threading.Thread(target=run, daemon=True)
+        self._install_thread.start()
+        return {"ok": True, "running": True, "log": self._install_log}
+
+    def browser_install_status(self) -> dict:
+        t = getattr(self, "_install_thread", None)
+        return {"running": bool(t and t.is_alive()), "log": getattr(self, "_install_log", ""), **self.browser_check()}
+
+    def browser_register_start(self, body: dict) -> dict:
+        reg = self._registrar()
+        reg.headless = bool(body.get("headless", False))
+        st = reg.start(body.get("profile") or "default", body.get("password") or None, dry_run=bool(body.get("dry_run", True)),
+                       captcha_timeout=int(body.get("captcha_timeout") or 180))
+        return st.to_dict()
+
+    def browser_register_status(self) -> dict:
+        reg = getattr(self, "registrar", None)
+        return reg.state.to_dict() if reg and reg.state else {"status": "idle", "steps": [], "screenshots": 0}
+
+    def browser_register_cancel(self) -> dict:
+        reg = getattr(self, "registrar", None)
+        if reg:
+            reg.cancel()
+        return self.browser_register_status()
+
+    def browser_register_captcha(self, body: dict) -> dict:
+        reg = getattr(self, "registrar", None)
+        if reg:
+            reg.answer_captcha(str(body.get("answer") or "").strip())
+        return self.browser_register_status()
+
+    def browser_shot(self, n: int) -> tuple[bytes, str]:
+        reg = getattr(self, "registrar", None)
+        shots = reg.state.screenshots if reg and reg.state else []
+        if not shots:
+            raise AccountError("nessuno screenshot")
+        idx = n if 0 <= n < len(shots) else len(shots) - 1
+        return Path(shots[idx]).read_bytes(), "image/png"
+
+    def create_demo_profile(self) -> dict:
+        from drop_monitor.browser import DEMO_PROFILE
+
+        self.profiles.save("demo", DEMO_PROFILE, password="DemoPass123")
+        return self.profiles.public("demo")
 
     def update_check(self) -> dict:
         from drop_monitor.updater import Updater
@@ -358,6 +432,15 @@ def make_handler(state: UIState):
                     self._json(state.proxies())
                 elif path == "/api/update/check":
                     self._json(state.update_check())
+                elif path == "/api/browser/check":
+                    self._json(state.browser_check())
+                elif path == "/api/browser/install/status":
+                    self._json(state.browser_install_status())
+                elif path == "/api/register/browser/status":
+                    self._json(state.browser_register_status())
+                elif path.startswith("/api/register/browser/shot/"):
+                    data, ctype = state.browser_shot(int(path.rsplit("/", 1)[1] or 0))
+                    self._bytes(data, ctype)
                 elif path == "/api/register/captcha":
                     data, ctype = state.register_captcha()
                     self._bytes(data, ctype)
@@ -398,11 +481,21 @@ def make_handler(state: UIState):
                     self._json(state.test_proxies(body))
                 elif path == "/api/update/apply":
                     self._json(state.update_apply())
+                elif path == "/api/browser/install":
+                    self._json(state.browser_install())
+                elif path == "/api/register/browser/start":
+                    self._json(state.browser_register_start(body))
+                elif path == "/api/register/browser/cancel":
+                    self._json(state.browser_register_cancel())
+                elif path == "/api/register/browser/captcha":
+                    self._json(state.browser_register_captcha(body))
+                elif path == "/api/profiles/demo/create":
+                    self._json(state.create_demo_profile())
                 elif path == "/api/restart":
                     self._json(state.restart())
                 elif path.startswith("/api/monitor/"):
                     self._json(state.monitor_action(path.rsplit("/", 1)[1], body))
-                elif path.startswith("/api/profiles/"):
+                elif path.startswith("/api/profiles/") and not path.endswith("/create"):
                     name = unquote(path.rsplit("/", 1)[1])
                     self._json(state.delete_profile(name) if self.command == "DELETE" else state.put_profile(name, body))
                 elif path == "/api/register/start":
@@ -415,7 +508,7 @@ def make_handler(state: UIState):
                     self._json(state.register_submit(body))
                 else:
                     self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
-            except (AccountError, ValueError, ConfigError) as e:
+            except (AccountError, ValueError, ConfigError, RuntimeError) as e:
                 self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             except Exception as e:
                 log.exception("ui %s failed", path)

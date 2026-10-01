@@ -130,6 +130,12 @@ URL http/socks5), gruppi, abilita/disabilita, test di massa con latenza e IP vis
 il proxy; i test automatici usano un proxy locale reale per provare che le richieste lo attraversano. SOCKS5 è supportato
 (dipendenza `socksio`).
 
+**Registrazione nel browser** (sezione Account): scegli profilo e il modulo del sito, Chromium si apre e lo vedi
+navigare, cliccare "Registrati", compilare i campi dal profilo, fermarsi sul captcha finché lo scrivi, premere
+"Registrati", leggere l'esito e salvare l'account (password in `.env`, cookie per il login). Ogni passo con orario e
+screenshot. Dry-run attivo per default. Profilo fittizio "demo" creabile con un bottone. Richiede il browser:
+bottone "Installa browser" (Playwright + Chromium).
+
 **Dry-run** = prova a secco: tutto come vero ma senza l'azione irreversibile (niente notifiche nel monitor, niente
 conferma dell'ordine). **Run** = esecuzione reale.
 
