@@ -51,7 +51,7 @@ docker compose logs -f                  # oppure: tail -f data/drop-monitor.log
 ### Su Windows (PC che farà anche gli ordini)
 
 Scarica solo [`setup-windows.bat`](setup-windows.bat) (tasto destro → "Salva link con nome" sulla versione *Raw*) e lancialo:
-installa in `%USERPROFILE%\drop-monitor` (o nella cartella passata come argomento) **senza installare nulla nel sistema**:
+installa **tutto in una sola cartella** `drop-monitor\` accanto al bat (o nella cartella passata come argomento) **senza installare nulla nel sistema**, temporanei e cache pip compresi:
 
 * `portable\python\`: Python 3.12 embeddable ufficiale (python.org) + pip, con le dipendenze dentro;
 * `portable\git\`: MinGit, solo se `git` non è nel PATH (altrimenti usa lo zip del branch da GitHub);

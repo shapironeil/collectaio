@@ -14,3 +14,5 @@ personal/*
 _backup/
 install-info.txt
 setup.local.bat
+_tmp/
+portable/

@@ -3,8 +3,10 @@ rem ============================================================================
 rem  drop-monitor - installazione / aggiornamento su Windows
 rem
 rem  Uso:  setup-windows.bat [cartella_installazione]
-rem        (senza argomenti: %USERPROFILE%\drop-monitor, oppure la cartella
-rem         in cui si trova questo file se e' gia' una installazione)
+rem        Senza argomenti installa TUTTO in una sola cartella accanto a questo
+rem        file: <cartella del bat>\drop-monitor  (codice, runtime portable,
+rem        dipendenze, dati, backup, file temporanei). Se il bat sta gia' dentro
+rem        un'installazione, aggiorna quella. Niente viene scritto altrove.
 rem
 rem  Cosa fa, ogni volta che lo lanci:
 rem   1. controlla Python 3.11+ (prova a installarlo con winget se manca)
@@ -49,7 +51,7 @@ set "GIT_URL=https://github.com/git-for-windows/git/releases/download/v%GIT_VER%
 set "NODE_VER=22.11.0"
 set "NODE_URL=https://nodejs.org/dist/v%NODE_VER%/node-v%NODE_VER%-win-x64.zip"
 set "NODE_SHA_URL=https://nodejs.org/dist/v%NODE_VER%/SHASUMS256.txt"
-set "PRESERVE_DIRS=data personal _backup .venv .git portable"
+set "PRESERVE_DIRS=data personal _backup .venv .git portable _tmp"
 set "PRESERVE_FILES=config.yaml .env setup.local.bat install-info.txt"
 
 rem --- cartella di installazione -------------------------------------------
@@ -60,9 +62,13 @@ if not "%~1"=="" (
 ) else if exist "%SELF_DIR%\drop_monitor\cli.py" (
     set "INSTALL_DIR=%SELF_DIR%"
 ) else (
-    set "INSTALL_DIR=%USERPROFILE%\drop-monitor"
+    set "INSTALL_DIR=%SELF_DIR%\drop-monitor"
 )
 if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+rem Tutto resta dentro la cartella: temporanei e cache pip compresi.
+set "TEMP=%INSTALL_DIR%\_tmp"
+set "TMP=%TEMP%"
+set "PIP_CACHE_DIR=%INSTALL_DIR%\portable\pip-cache"
 set "STAMP="
 for /f %%s in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%s"
 if not defined STAMP set "STAMP=%RANDOM%%RANDOM%"
@@ -74,6 +80,7 @@ echo  repo    : https://github.com/%REPO%  (branch %BRANCH%)
 echo  cartella: %INSTALL_DIR%
 echo.
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" || goto :fail_mkdir
+if not exist "%TEMP%" mkdir "%TEMP%"
 
 rem ============================ 1/7 PYTHON ===================================
 set "PORTABLE=%INSTALL_DIR%\portable"
@@ -282,9 +289,12 @@ if errorlevel 1 (
 )
 popd
 
+rmdir /s /q "%TEMP%" >nul 2>&1
 echo.
 echo ============================================================================
 echo  Installazione completata in: %INSTALL_DIR%
+echo  Tutto e' in questa cartella: codice, portable\ (python, git, pip-cache),
+echo  data\ (db, log), personal\ (profili), _backup\, config.yaml, .env
 echo.
 echo  Prossimi passi:
 echo   1. apri .env e inserisci TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID
@@ -375,7 +385,7 @@ exit /b 0
 :sync_from
 rem Copia il codice da %1 nella cartella di installazione, senza toccare i file preservati.
 robocopy "%~1" "%INSTALL_DIR%" /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NP ^
-    /XD "%~1\.git" "%INSTALL_DIR%\.git" "%INSTALL_DIR%\.venv" "%INSTALL_DIR%\data" "%INSTALL_DIR%\personal" "%INSTALL_DIR%\_backup" "%INSTALL_DIR%\portable" ^
+    /XD "%~1\.git" "%INSTALL_DIR%\.git" "%INSTALL_DIR%\.venv" "%INSTALL_DIR%\data" "%INSTALL_DIR%\personal" "%INSTALL_DIR%\_backup" "%INSTALL_DIR%\portable" "%INSTALL_DIR%\_tmp" ^
     /XF config.yaml .env setup.local.bat install-info.txt >nul
 if errorlevel 8 goto :fail_download
 exit /b 0
