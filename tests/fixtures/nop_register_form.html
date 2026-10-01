@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html><head><title>Registrati</title></head><body>
+<form action="/it/register?returnurl=%2fit%2fcart" method="post"><input name="__RequestVerificationToken" type="hidden" value="A40qPS8kckRyL5202sVKvqoqRDIP7BOLpxu2pO5U3rVkvmkaulSfm5n2ZxwZ5n23WGUohTrJz_9FBbGAEOg-2Nqo21EvZ56-3mmLLmhRxgw1" />    <div class="header_container">
+    <div class="page registration-page">
+  
+        <div class="page-title">
+            <h1>Registrati
+           </h1>
+                  
+        </div>
+        <div class="page-body">
+
+ 
+
+            
+
+            <div class="fieldset">
+                <div class="title">
+                    <strong>Dettagli personali</strong>
+                </div>
+                <div class="form-fields">
+                    <div class="inputs">
+                        <label for="FirstName">Nome:</label>
+                        <input class="text-box single-line" data-val="true" data-val-required="Il nome è obbligatorio" id="FirstName" name="FirstName" type="text" value="" />
+                        <span class="required">*</span>
+                        <span class="field-validation-valid" data-valmsg-for="FirstName" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="inputs">
+                        <label for="LastName">Cognome:</label>
+                        <input class="text-box single-line" data-val="true" data-val-required="Il cognome è obbligatorio" id="LastName" name="LastName" type="text" value="" />
+                        <span class="required">*</span>
+                        <span class="field-validation-valid" data-valmsg-for="LastName" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="inputs">
+                        <label for="Email">E-mail:</label>
+                        <input class="text-box single-line" data-val="true" data-val-email="E-mail errata" data-val-required="L&#39;e-mail è obbligatoria" id="Email" name="Email" type="text" value="" />
+                        <span class="required">*</span>
+                        <span class="field-validation-valid" data-valmsg-for="Email" data-valmsg-replace="true"></span>
+                    </div>
+                                    </div>
+            </div>
+                <div class="fieldset">
+                    <div class="title">
+                        <strong>Dettagli azienda</strong>
+                    </div>
+                    <div class="form-fields">
+                            <div class="inputs">
+                                <label for="Company">Ragione sociale:</label>
+                                <input class="text-box single-line" id="Company" name="Company" type="text" value="" />
+                                <span class="field-validation-valid" data-valmsg-for="Company" data-valmsg-replace="true"></span>
+                            </div>
+                                            </div>
+                </div>
+                            <div class="fieldset">
+                    <div class="title">
+                        <strong>Indirizzo</strong>
+                    </div>
+                    <div class="form-fields">
+                            <div class="inputs">
+                                <label for="StreetAddress">Indirizzo:</label>
+                                <input class="text-box single-line" data-val="true" data-val-required="L&#39;indirizzo 1 è obbligatorio" id="StreetAddress" name="StreetAddress" type="text" value="" />
+<span class="required">*</span>                                <span class="field-validation-valid" data-valmsg-for="StreetAddress" data-valmsg-replace="true"></span>
+                            </div>
+                                                                            <div class="inputs">
+                                <label for="ZipPostalCode">Codice postale:</label>
+                                <input class="text-box single-line" data-val="true" data-val-required="Il codice postale è obbligatorio" id="ZipPostalCode" name="ZipPostalCode" type="text" value="" />
+<span class="required">*</span>                                <span class="field-validation-valid" data-valmsg-for="ZipPostalCode" data-valmsg-replace="true"></span>
+                            </div>
+                                                    <div class="inputs">
+                                <label for="City">Citt&#224;:</label>
+                                <input class="text-box single-line" data-val="true" data-val-required="La città è richiesta" id="City" name="City" type="text" value="" />
+<span class="required">*</span>                                <span class="field-validation-valid" data-valmsg-for="City" data-valmsg-replace="true"></span>
+                            </div>
+                                                    <div class="inputs">
+                                <label for="CountryId">Nazione:</label>
+                                <select data-val="true" data-val-number="The field Nazione must be a number." data-val-required="&#39;Country Id&#39; non puo essere vuoto." id="CountryId" name="CountryId"><option selected="selected" value="0">Seleziona la nazione</option><option value="46">Italy</option><option value="34">France</option><option value="36">Germany</option><option value="74">Spain</option></select>
+<span class="required">*</span>                                <span class="field-validation-valid" data-valmsg-for="CountryId" data-valmsg-replace="true"></span>
+                            </div>
+                                                    <div class="inputs">
+                                <label for="StateProvinceId">Stato/provincia:</label>
+                                <select data-val="true" data-val-number="The field Stato/provincia must be a number." data-val-required="&#39;State Province Id&#39; non puo essere vuoto." id="StateProvinceId" name="StateProvinceId"><option selected="selected" value="0">Seleziona la provincia</option>
+</select>
+<span class="required">*</span>                                <span class="field-validation-valid" data-valmsg-for="StateProvinceId" data-valmsg-replace="true"></span>
+                                <span id="states-loading-progress" style="display: none;" class="please-wait">Attendere…</span>
+                            </div>
+                    </div>
+                </div>
+                            <div class="fieldset">
+                    <div class="title">
+                        <strong>Recapiti</strong>
+                    </div>
+                    <div class="form-fields">
+                            <div class="inputs">
+                                <label for="Phone">Telefono:</label>
+                                <input class="text-box single-line" data-val="true" data-val-required="Il telefono è obbligatorio" id="Phone" name="Phone" type="text" value="" />
+<span class="required">*</span>                                <span class="field-validation-valid" data-valmsg-for="Phone" data-valmsg-replace="true"></span>
+                            </div>
+                                            </div>
+                </div>
+                            <div class="fieldset">
+                    <div class="title">
+                        <strong>Opzioni</strong>
+                    </div>
+                    <div class="form-fields">
+                            <div class="inputs">
+                                <label for="Newsletter">Ricevi la newsletter:</label>
+                                <input class="check-box" data-val="true" data-val-required="&#39;Newsletter&#39; non puo essere vuoto." id="Newsletter" name="Newsletter" type="checkbox" value="true" /><input name="Newsletter" type="hidden" value="false" />
+                                <span class="field-validation-valid" data-valmsg-for="Newsletter" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="inputs custom-attributes">
+        <label>Codice Fiscale:</label>
+        
+                <input name="customer_attribute_1" type="text" class="textbox" id="customer_attribute_1" />
+            </div>
+    <div class="inputs custom-attributes">
+        <label>Partita IVA:</label>
+        
+                <input name="customer_attribute_2" type="text" class="textbox" id="customer_attribute_2" />
+            </div>
+    <div class="inputs custom-attributes">
+        <label>Codice Univoco (SDI) per fattura:</label>
+        
+                <input name="customer_attribute_6" type="text" class="textbox" id="customer_attribute_6" />
+            </div>
+    <div class="inputs custom-attributes">
+        <label>Indirizzo PEC:</label>
+        
+                <input name="customer_attribute_7" type="text" class="textbox" id="customer_attribute_7" />
+            </div>
+    <div class="inputs custom-attributes">
+        <label>Come ci hai conosciuto?:</label>
+        
+            <ul class="option-list">
+                    <li>
+                        <input id="customer_attribute_3_1" type="radio" name="customer_attribute_3" value="1" />
+                        <label for="customer_attribute_3_1">Google</label>
+                    </li>
+                    <li>
+                        <input id="customer_attribute_3_2" type="radio" name="customer_attribute_3" value="2" />
+                        <label for="customer_attribute_3_2">Facebook</label>
+                    </li>
+                    <li>
+                        <input id="customer_attribute_3_3" type="radio" name="customer_attribute_3" value="3" />
+                        <label for="customer_attribute_3_3">Instagram</label>
+                    </li>
+                    <li>
+                        <input id="customer_attribute_3_4" type="radio" name="customer_attribute_3" value="4" />
+                        <label for="customer_attribute_3_4">TikTok</label>
+                    </li>
+                    <li>
+                        <input id="customer_attribute_3_5" type="radio" name="customer_attribute_3" value="5" />
+                        <label for="customer_attribute_3_5">Passaparola</label>
+                    </li>
+                    <li>
+                        <input id="customer_attribute_3_7" type="radio" name="customer_attribute_3" value="7" />
+                        <label for="customer_attribute_3_7">Giornali, Riviste o Volantini</label>
+                    </li>
+                    <li>
+                        <input id="customer_attribute_3_8" type="radio" name="customer_attribute_3" value="8" />
+                        <label for="customer_attribute_3_8">Clienti Gemcard Infinity Collection</label>
+                    </li>
+            </ul>
+        <span class="required">*</span>    </div>
+                    </div>
+                </div>
+                        <div class="fieldset">
+                <div class="title">
+                    <strong>Password</strong>
+                </div>
+                <div class="form-fields">
+                    <div class="inputs">
+                        <label for="Password">Password:</label>
+                        <input class="text-box single-line password" data-val="true" data-val-length="La password deve contenere un minimo di 6 caratteri" data-val-length-max="999" data-val-length-min="6" data-val-required="È richiesta una password" id="Password" name="Password" type="password" value="" />
+                        <span class="required">*</span>
+                        <span class="field-validation-valid" data-valmsg-for="Password" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="inputs">
+                        <label for="ConfirmPassword">Conferma password:</label>
+                        <input class="text-box single-line password" data-val="true" data-val-equalto="La password e la password di conferma non corrispondono" data-val-equalto-other="*.Password" data-val-required="È richiesta una password" id="ConfirmPassword" name="ConfirmPassword" type="password" value="" />
+                        <span class="required">*</span>
+                        <span class="field-validation-valid" data-valmsg-for="ConfirmPassword" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="captcha-box">
+                        
+ 
+<br/>
+<img id="CaptchaImage" src="/DefaultCaptcha/Generate?t=f54fce22e533468fb6068c7d10ca3e95"/><input id="CaptchaDeText" name="CaptchaDeText" type="hidden" value="f54fce22e533468fb6068c7d10ca3e95" /> <br/><a href="#CaptchaImage" id="eba427291c464bd59b093664ff3dde5d" onclick="______27677f71bc14438ab28df9944ba9817e________()" style="display:none;"></a><br/>Risposta<br/><input autocomplete="off" autocorrect="off" id="CaptchaInputText" name="CaptchaInputText" type="text" value="" /><br/>
+
+                        <p class="Error">   </p>
+                    </div>
+                    
+                </div>
+            </div>
+                
+                <div class="accept-privacy-policy">
+                    <input id="accept-privacy-policy" type="checkbox" name="accept-privacy-policy" />
+                    <label for="accept-privacy-policy">Accetto il trattamento dei miei dati personali secondo le modalità indicate nell'informativa sulla privacy</label>
+                    <a href="https://www.iubenda.com/privacy-policy/52222766" class="iubenda-nostyle iubenda-embed " title="Privacy Policy">(leggi)</a><span class="required" style="color: #e4434b;">*</span>
+
+                </div>
+                <div class="accept-privacy-policy">
+                    <input id="accept-privacy-termini" type="checkbox" name="accept-privacy-termini" />
+                    <label for="accept-privacy-termini">Dichiaro di aver preso visione e di accettare le Condizioni generali  di Vendita</label>
+                    <a href="https://www.gemcardinfinitycollection.it/Content/Images/uploaded/CGUV-IL-MONDO-DEI-POKEMON.pdf" title="Termini e Copndizioni" target="_blank">(leggi)</a><span class="required" style="color: #e4434b;">*</span>
+
+                </div>
+                <div class="accept-privacy-registrazione">
+                    <input id="accept-privacy-registrazione" type="checkbox" name="accept-privacy-registrazione" />
+                    <label for="accept-privacy-registrazione">Accetto l'informativa di registrazione al sito web</label>
+                    <a href="https://www.gemcardinfinitycollection.it/Content/Images/uploaded/Registrazione_sito_web.pdf" title="Informativa di Registrazione al sito" target="_blank" >(leggi)</a><span class="required" style="color: #e4434b;">*</span>
+
+                </div>
+            <div class="buttons">
+                <input type="submit" id="register-button" class="button-1 register-next-step-button" value="Registrati" name="register-button" />
+            </div>
+            <div class="external-authentication">
+                
+            </div>
+        </div>
+    </div>
+        </div>
+</form>
+</body></html>

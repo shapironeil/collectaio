@@ -51,17 +51,24 @@ docker compose logs -f                  # oppure: tail -f data/drop-monitor.log
 ### Su Windows (PC che farà anche gli ordini)
 
 Scarica solo [`setup-windows.bat`](setup-windows.bat) (tasto destro → "Salva link con nome" sulla versione *Raw*) e lancialo:
-installa in `%USERPROFILE%\drop-monitor` (o nella cartella passata come argomento), controlla Python 3.11+ (prova
-`winget` se manca), usa git se c'è altrimenti scarica lo zip da GitHub, crea il `.venv`, esegue i test e crea
-`config.yaml`, `.env` e `personal\order-profile.yaml` dai template.
+installa in `%USERPROFILE%\drop-monitor` (o nella cartella passata come argomento) **senza installare nulla nel sistema**:
+
+* `portable\python\`: Python 3.12 embeddable ufficiale (python.org) + pip, con le dipendenze dentro;
+* `portable\git\`: MinGit, solo se `git` non è nel PATH (altrimenti usa lo zip del branch da GitHub);
+* `portable\node\`: Node.js LTS, **opzionale** (`PORTABLE_NODE=1`), verificato con lo `SHASUMS256.txt` ufficiale.
+  drop-monitor è solo Python: Node non serve oggi, il meccanismo è pronto per componenti futuri.
+
+Ogni download è controllato (dimensione minima, eseguibile che risponde, hash dove pubblicato) prima dell'uso. Con
+`PORTABLE_PYTHON=0` usa invece il Python di sistema in un `.venv`. Alla fine esegue i test offline e crea `config.yaml`,
+`.env` e `personal\order-profile.yaml` dai template.
 
 **Rilancialo per aggiornare**: il codice viene sincronizzato dal branch, mentre `config.yaml`, `.env`, `data\`,
-`personal\` e `.venv\` non vengono mai toccati e, per sicurezza, copiati in `_backup\<data-ora>\` (ultimi 5).
+`personal\`, `portable\` e `.venv\` non vengono mai toccati e, per sicurezza, i file personali sono copiati in `_backup\<data-ora>\` (ultimi 5).
 Variabili opzionali: `DROP_MONITOR_BRANCH` (branch da scaricare), `GITHUB_TOKEN` (repo privato senza git); puoi
 metterle in `setup.local.bat` accanto allo script.
 
 Poi: `windows\test.bat` (test + scansione reale senza notifiche), `windows\start.bat` (avvio in finestra),
-`windows\autostart.bat` (attività pianificata all'accesso, `autostart.bat remove` per toglierla).
+`windows\ui.bat` (finestra di controllo), `windows\autostart.bat` (attività pianificata all'accesso, `autostart.bat remove` per toglierla).
 Il `.env` accanto a `config.yaml` viene caricato automaticamente dall'app.
 
 ### Senza Docker
@@ -72,6 +79,22 @@ pip install -r requirements.txt && pip install -e .
 drop-monitor -c config.yaml run
 ```
 
+## Finestra di controllo (stile glass, modello Cyber AIO)
+
+`drop-monitor ui` (su Windows `windows\ui.bat`) apre `http://127.0.0.1:8765` nel browser: una finestra "vetrata"
+con sidebar come i bot AIO, pensata per diventare il pannello unico di monitor e ordini.
+
+| sezione | oggi | fase 2 |
+|---|---|---|
+| **Dashboard** | stato monitor, prodotti osservati con pill verde/ambra, eventi | checkout riusciti, analytics |
+| **Tasks** | i `products` di config.yaml, sorgenti, polling | task = prodotto + profilo + quantità + modalità auto-checkout |
+| **Profili** | profili multipli (account, spedizione, fatturazione, limiti di spesa); password solo in `.env` | un profilo per ogni ordine da replicare |
+| **Account** | registrazione assistita sul negozio: scarica il modulo, mostra il captcha, tu lo leggi, la finestra invia e verifica l'esito | login automatico (senza captcha) e sessione pronta al drop |
+| **Impostazioni** | configurazione attiva e guida | |
+
+Il server ascolta solo su `127.0.0.1` e rifiuta richieste da altre origini. Nessun captcha viene risolto in automatico.
+Lo studio completo del modulo di registrazione (campi, token, province, esiti) è in [`docs/site-analysis.md`](docs/site-analysis.md#registrazione-account-itregisterreturnurl2fit2fcart).
+
 ## Comandi
 
 | comando | cosa fa |
@@ -79,6 +102,7 @@ drop-monitor -c config.yaml run
 | `drop-monitor run [--dry-run]` | loop infinito; `--dry-run` logga le notifiche invece di inviarle |
 | `drop-monitor once [--dry-run] [--delay 3]` | una scansione completa (ogni sorgente + ogni pagina prodotto una volta), stampa stato ed esce. Ideale per i test |
 | `drop-monitor probe URL [--type …] [--file saved.html]` | scarica (o legge da file) e mostra cosa vede il parser e quali prodotti matchano |
+| `drop-monitor ui [--port 8765] [--no-browser]` | finestra di controllo locale |
 | `drop-monitor status` | stato e ultimi eventi dal database |
 | `drop-monitor healthcheck` | exit 0 se l'heartbeat è fresco |
 | `drop-monitor test-telegram` | invia un messaggio di prova |
@@ -158,11 +182,16 @@ drop_monitor/
   notifier.py       Telegram sendMessage/getUpdates + formattazione messaggi
   telegram_bot.py   thread /status /ping /help
   health.py         heartbeat file + healthcheck
+  account.py        studio del modulo di registrazione nopCommerce, payload, invio, login
+  profile.py        profili acquirente multipli (personal/), password in .env
+  ui/               finestra glass: server HTTP locale + static/index.html
 tests/              pytest + fixtures reali
 docs/site-analysis.md
 ```
 
-## Roadmap (fase 2)
+## Roadmap (fase 2, "come Cyber AIO ma meglio")
 
-Il monitor è la base per il "sistema loop" multi-ordine: la pagina prodotto espone già id prodotto ed endpoint
-add-to-cart; la fase successiva (sessione, carrello, checkout) va progettata a parte valutando i termini del sito.
+Il monitor e la finestra sono la base del sistema multi-ordine: profili multipli, account registrati dalla finestra,
+login senza captcha, id prodotto ed endpoint add-to-cart già noti. Restano da studiare carrello e checkout
+(`/it/cart`, `/onepagecheckout`), i metodi di pagamento e i limiti di quantità. "Meglio" per noi significa anche:
+una richiesta per volta, backoff, nessun captcha risolto da macchine, conferma su Telegram prima di ogni ordine.

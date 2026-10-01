@@ -66,6 +66,28 @@ Per reagire più in fretta a un drop annunciato: `min_seconds: 20`, `max_seconds
 | Crash del processo | Docker `restart: unless-stopped`; heartbeat `health.json` + `HEALTHCHECK`; stato in SQLite ⇒ nessuna rinotifica al riavvio |
 | Comandi da chat sconosciute | ignorati e loggati |
 
+## Registrazione account (`/it/register?returnurl=%2fit%2fcart`)
+
+Form `POST` sulla stessa URL, protetto da `__RequestVerificationToken` (campo hidden + cookie `__RequestVerificationToken`;
+la sessione imposta anche `ASP.NET_SessionId` e `Nop.customer`). `returnurl` riporta al carrello a registrazione avvenuta.
+
+| sezione | campo sito | obbligatorio | nel profilo (`personal/`) |
+|---|---|---|---|
+| Dettagli personali | `FirstName`, `LastName`, `Email` | sì | `shipping.first_name`, `shipping.last_name`, `account.email` |
+| Dettagli azienda | `Company`, `customer_attribute_1` Codice Fiscale, `_2` Partita IVA, `_6` Codice SDI, `_7` PEC | no | `shipping.company`, `billing.*` |
+| Indirizzo | `StreetAddress`, `ZipPostalCode`, `City`, `CountryId` (46 = Italy), `StateProvinceId` | sì | `shipping.*`, `country_id`, `province_id` |
+| Recapiti | `Phone` | sì | `shipping.phone` |
+| Opzioni | `Newsletter` (true/false), `customer_attribute_3` "Come ci hai conosciuto?" radio 1 Google, 2 Facebook, 3 Instagram, 4 TikTok, 5 Passaparola, 7 Giornali, 8 Clienti | no | `preferences.newsletter`, `preferences.referral` |
+| Password | `Password`, `ConfirmPassword` (min 6, max 999) | sì | `.env` → `ORDER_PASSWORD[_NOME]` |
+| Captcha | `CaptchaDeText` (hash hidden) + `CaptchaInputText` (risposta); immagine GIF 200×70 da `/DefaultCaptcha/Generate?t=<hash>`, refresh `POST /DefaultCaptcha/Refresh` | sì | risolto a mano nella finestra |
+| Consensi | `accept-privacy-policy`, `accept-privacy-termini`, `accept-privacy-registrazione` | solo lato client (alert JS se mancano) | inviati come `on` dopo spunta esplicita nella finestra |
+
+* Le province arrivano via AJAX: `GET /country/getstatesbycountryid?countryId=46&addSelectStateItem=true` → 107 province (`{"id":130,"name":"Milano"}`). La finestra le carica e salva `province_id`.
+* Il captcha è di tipo **CaptchaMvc** (immagine distorta, nessun reCAPTCHA/hCaptcha/Turnstile): serve una persona. drop-monitor mostra l'immagine nella finestra "Account" e inoltra la risposta digitata, senza alcuna risoluzione automatica.
+* Esito atteso (nopCommerce): redirect a `/it/registerresult/1` (attivo), `/2` (approvazione negozio), `/3` (conferma e-mail) oppure direttamente al `returnurl`; in caso di errore il form viene rirenderizzato con `div.message-error li` / `span.field-validation-error` / `.captcha-box p.Error`. Il classificatore gestisce tutti i casi; l'esito reale di questo negozio (1, 2 o 3) si saprà alla prima registrazione.
+* **Login** `/it/login`: solo `Email`, `Password`, `RememberMe` + token anti-forgery, **senza captcha**: utilizzabile in automatico nella fase 2 con account già creati.
+* Cosa non si sa ancora: struttura del carrello/checkout (`/it/cart`, `/onepagecheckout`, in `Disallow` per i bot), metodi di pagamento disponibili, eventuale limite di quantità per ordine.
+
 ## Limiti noti
 
 * L'aggiunta al carrello su nopCommerce è una POST AJAX legata a sessione: non esiste un deep link GET. La notifica riporta l'endpoint per la fase di automazione.

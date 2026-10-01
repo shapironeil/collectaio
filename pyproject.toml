@@ -20,5 +20,8 @@ drop-monitor = "drop_monitor.cli:main"
 [tool.setuptools.packages.find]
 include = ["drop_monitor*"]
 
+[tool.setuptools.package-data]
+drop_monitor = ["ui/static/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

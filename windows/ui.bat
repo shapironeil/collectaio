@@ -1,5 +1,5 @@
 @echo off
-rem Avvia il monitor in questa finestra (Ctrl+C per fermarlo). Log anche in data\drop-monitor.log
+rem Apre la finestra di controllo (stile glass) nel browser: http://127.0.0.1:8765
 setlocal
 cd /d "%~dp0.."
 set "PYEXE=.venv\Scripts\python.exe"
@@ -8,8 +8,6 @@ if not exist "%PYEXE%" (
     echo Esegui prima setup-windows.bat
     pause & exit /b 1
 )
-title drop-monitor
-"%PYEXE%" -m drop_monitor -c config.yaml run %*
-echo.
-echo Monitor terminato.
+title drop-monitor ui
+"%PYEXE%" -m drop_monitor -c config.yaml ui %*
 pause

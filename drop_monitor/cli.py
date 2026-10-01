@@ -44,6 +44,11 @@ def _build_parser() -> argparse.ArgumentParser:
     probe.add_argument("--type", default="auto", choices=["auto", "category", "search", "product", "rss", "shopify"])
     probe.add_argument("--file", help="parse a saved HTML/XML file instead of fetching (url is still used as base)")
 
+    ui = sub.add_parser("ui", help="open the local control window (glass UI) in the browser")
+    ui.add_argument("--port", type=int, default=8765)
+    ui.add_argument("--host", default="127.0.0.1")
+    ui.add_argument("--no-browser", action="store_true")
+
     sub.add_parser("status", help="print the tracked state from the database")
     sub.add_parser("healthcheck", help="exit 0 if the monitor heartbeat is fresh")
     sub.add_parser("test-telegram", help="send a test message to the configured chat")
@@ -57,12 +62,27 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as e:
         print(f"config error: {e}", file=sys.stderr)
         return 2
-    setup_logging(cfg.storage.log_path if args.cmd in ("run", "once") else None, cfg.storage.log_level)
+    setup_logging(cfg.storage.log_path if args.cmd in ("run", "once", "ui") else None, cfg.storage.log_level)
 
     if args.cmd == "healthcheck":
         ok, msg = check_health(cfg.storage.health_path, cfg.storage.health_max_age_seconds)
         print(msg)
         return 0 if ok else 1
+
+    if args.cmd == "ui":
+        from drop_monitor.ui.server import serve
+
+        store = Store(cfg.storage.db_path)
+        httpd = serve(cfg, store, host=args.host, port=args.port, open_browser=not args.no_browser)
+        print(f"drop-monitor window: http://{args.host}:{httpd.server_address[1]}/  (Ctrl+C per chiudere)")
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            httpd.server_close()
+            store.close()
+        return 0
 
     if args.cmd == "status":
         store = Store(cfg.storage.db_path)

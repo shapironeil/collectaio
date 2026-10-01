@@ -1,33 +1,41 @@
-# Profilo per la FASE 2 (ordini automatici). Copia in personal/order-profile.yaml.
+# Profilo acquirente (fase 2: account e ordini). Copia in personal/order-profile.yaml,
+# oppure compilalo dalla finestra: drop-monitor ui  (windows\ui.bat).
 # Il file reale e' ignorato da git e preservato da setup-windows.bat a ogni aggiornamento.
 #
-# NON scrivere qui numeri di carta o CVV: la fase 2 usera' un metodo di pagamento
-# gia' salvato sull'account del negozio (es. PayPal) e la password va in .env
-# (ORDER_PASSWORD) o inserita a mano. Tienilo comunque solo su questo PC.
+# NON scrivere qui numeri di carta o CVV: il pagamento usera' un metodo gia' salvato
+# sull'account del negozio (es. PayPal). La password dell'account va in .env (ORDER_PASSWORD).
 
 account:
-  email: ""              # email dell'account sul negozio
-  password: "${ORDER_PASSWORD:-}"   # lascia cosi' e metti ORDER_PASSWORD in .env
+  email: ""
+  password: "${ORDER_PASSWORD:-}"   # lascia cosi': la finestra la salva in .env
 
-shipping:
+shipping:                 # = campi "Indirizzo" e "Recapiti" della registrazione sul sito
   first_name: ""
   last_name: ""
-  company: ""
+  company: ""             # "Ragione sociale", facoltativo
   address1: ""
   address2: ""
   zip: ""
   city: ""
-  province: ""           # sigla, es. MI
+  province: ""            # nome come sul sito, es. "Milano"
+  province_id: 0          # id nopCommerce della provincia (la finestra lo compila)
   country: "Italia"
+  country_id: 46          # 46 = Italy sul sito
   phone: ""
 
-billing:
+billing:                  # = "Dettagli azienda" (tutti facoltativi)
   same_as_shipping: true
-  fiscal_code: ""        # codice fiscale, se richiesto in fattura
+  fiscal_code: ""         # Codice Fiscale
+  vat_number: ""          # Partita IVA
+  sdi_code: ""            # Codice Univoco SDI
+  pec: ""                 # Indirizzo PEC
 
 preferences:
   max_quantity_per_order: 1
-  max_total_eur: 150     # oltre questo importo l'ordine NON viene inviato
-  shipping_method: ""    # nome esatto come appare al checkout (vuoto = il primo disponibile)
-  payment_method: ""     # es. "PayPal"
-  confirm_on_telegram: true   # chiedere conferma su Telegram prima di confermare l'ordine
+  max_total_eur: 150      # oltre questo importo l'ordine NON viene inviato
+  shipping_method: ""     # nome esatto come al checkout (vuoto = primo disponibile)
+  payment_method: ""      # es. "PayPal"
+  confirm_on_telegram: true
+  newsletter: false       # "Ricevi la newsletter" in registrazione
+  referral: ""            # "Come ci hai conosciuto?": 1 Google, 2 Facebook, 3 Instagram, 4 TikTok,
+                          # 5 Passaparola, 7 Giornali/Riviste, 8 Clienti Gemcard (vuoto = non indicato)

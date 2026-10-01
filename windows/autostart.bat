@@ -9,12 +9,14 @@ if /i "%~1"=="remove" (
     schtasks /Delete /TN "%TASK%" /F
     goto :done
 )
-if not exist "%ROOT%\.venv\Scripts\pythonw.exe" (
+set "PYW=%ROOT%\.venv\Scripts\pythonw.exe"
+if exist "%ROOT%\portable\python\pythonw.exe" set "PYW=%ROOT%\portable\python\pythonw.exe"
+if not exist "%PYW%" (
     echo Esegui prima setup-windows.bat
     pause & exit /b 1
 )
 schtasks /Create /TN "%TASK%" /SC ONLOGON /RL LIMITED /F ^
-  /TR "\"%ROOT%\.venv\Scripts\pythonw.exe\" -m drop_monitor -c \"%ROOT%\config.yaml\" run"
+  /TR "\"%PYW%\" -m drop_monitor -c \"%ROOT%\config.yaml\" run"
 if errorlevel 1 (echo Creazione attivita' fallita & pause & exit /b 1)
 echo Attivita' "%TASK%" creata: parte a ogni accesso. Avvio adesso...
 schtasks /Run /TN "%TASK%"

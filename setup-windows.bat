@@ -16,9 +16,20 @@ rem   5. crea/aggiorna l'ambiente Python (.venv) e le dipendenze
 rem   6. crea config.yaml / .env / personal\order-profile.yaml dai template se mancano
 rem   7. esegue i test offline e un self-test del parser
 rem
+rem  Runtime PORTABLE (nessuna installazione di sistema, tutto in <cartella>\portable\):
+rem    Python 3.12 embeddable  sempre (python.org) + pip        -> portable\python
+rem    MinGit                  solo se git non e' nel PATH       -> portable\git
+rem    Node.js (LTS)           opzionale, PORTABLE_NODE=1       -> portable\node
+rem      (drop-monitor e' solo Python: Node non serve oggi; e' qui pronto per
+rem       componenti futuri, con verifica SHA256 ufficiale di nodejs.org)
+rem  Ogni download viene controllato (dimensione, eseguibile che risponde,
+rem  SHA256 dove il produttore lo pubblica) prima di essere usato.
+rem
 rem  Variabili opzionali (impostale prima di lanciare, o in setup.local.bat):
 rem    DROP_MONITOR_BRANCH   branch da scaricare (default sotto)
 rem    GITHUB_TOKEN          token GitHub se il repository e' privato e git manca
+rem    PORTABLE_PYTHON=0     usa il Python di sistema (venv) invece del portable
+rem    PORTABLE_NODE=1       scarica anche Node.js portable
 rem ============================================================================
 setlocal EnableExtensions EnableDelayedExpansion
 title drop-monitor setup
@@ -28,7 +39,17 @@ set "BRANCH=claude/quirky-ramanujan-1kvhs9"
 if exist "%~dp0setup.local.bat" call "%~dp0setup.local.bat"
 if not "%DROP_MONITOR_BRANCH%"=="" set "BRANCH=%DROP_MONITOR_BRANCH%"
 set "PY_MIN_MINOR=11"
-set "PRESERVE_DIRS=data personal _backup .venv .git"
+if not defined PORTABLE_PYTHON set "PORTABLE_PYTHON=1"
+if not defined PORTABLE_NODE set "PORTABLE_NODE=0"
+set "PY_VER=3.12.7"
+set "PY_URL=https://www.python.org/ftp/python/%PY_VER%/python-%PY_VER%-embed-amd64.zip"
+set "PIP_URL=https://bootstrap.pypa.io/get-pip.py"
+set "GIT_VER=2.47.1"
+set "GIT_URL=https://github.com/git-for-windows/git/releases/download/v%GIT_VER%.windows.1/MinGit-%GIT_VER%-64-bit.zip"
+set "NODE_VER=22.11.0"
+set "NODE_URL=https://nodejs.org/dist/v%NODE_VER%/node-v%NODE_VER%-win-x64.zip"
+set "NODE_SHA_URL=https://nodejs.org/dist/v%NODE_VER%/SHASUMS256.txt"
+set "PRESERVE_DIRS=data personal _backup .venv .git portable"
 set "PRESERVE_FILES=config.yaml .env setup.local.bat install-info.txt"
 
 rem --- cartella di installazione -------------------------------------------
@@ -55,8 +76,17 @@ echo.
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" || goto :fail_mkdir
 
 rem ============================ 1/7 PYTHON ===================================
-echo [1/7] Controllo Python 3.%PY_MIN_MINOR%+ ...
+set "PORTABLE=%INSTALL_DIR%\portable"
+if not exist "%PORTABLE%" mkdir "%PORTABLE%"
 set "PY="
+set "PY_IS_PORTABLE=0"
+if "%PORTABLE_PYTHON%"=="1" (
+    echo [1/7] Python portable %PY_VER% in portable\python ...
+    call :ensure_portable_python
+    if defined PY goto :python_ok
+    echo       portable non disponibile: provo il Python di sistema
+)
+echo [1/7] Controllo Python 3.%PY_MIN_MINOR%+ di sistema ...
 call :find_python
 if defined PY goto :python_ok
 echo       Python 3.%PY_MIN_MINOR%+ non trovato. Provo a installarlo con winget...
@@ -74,11 +104,48 @@ goto :fail
 for /f "tokens=2" %%v in ('%PY% --version 2^>^&1') do set "PYVER=%%v"
 echo       OK: %PY% (%PYVER%)
 
-rem ============================ 2/7 GIT ======================================
+rem ============================ 2/7 GIT / NODE ===============================
 echo [2/7] Controllo git ...
 set "HAVE_GIT=0"
+set "GIT=git"
 where git >nul 2>&1 && set "HAVE_GIT=1"
-if "%HAVE_GIT%"=="1" (echo       OK: git disponibile) else (echo       git assente: usero' lo zip di GitHub)
+if "%HAVE_GIT%"=="1" goto :git_ok
+if exist "%PORTABLE%\git\cmd\git.exe" (set "HAVE_GIT=1" & set "GIT=%PORTABLE%\git\cmd\git.exe" & goto :git_ok)
+echo       git assente: scarico MinGit %GIT_VER% portable ...
+call :download "%GIT_URL%" "%TEMP%\mingit-%STAMP%.zip" 20000000
+if errorlevel 1 goto :git_zip
+call :unzip "%TEMP%\mingit-%STAMP%.zip" "%PORTABLE%\git"
+del /q "%TEMP%\mingit-%STAMP%.zip" >nul 2>&1
+if exist "%PORTABLE%\git\cmd\git.exe" (
+    "%PORTABLE%\git\cmd\git.exe" --version >nul 2>&1 && (set "HAVE_GIT=1" & set "GIT=%PORTABLE%\git\cmd\git.exe")
+)
+:git_zip
+if "%HAVE_GIT%"=="1" goto :git_ok
+echo       nessun git: usero' lo zip di GitHub
+goto :git_done
+:git_ok
+for /f "tokens=3" %%v in ('"%GIT%" --version 2^>nul') do echo       OK: git %%v (%GIT%)
+if "%GIT%"=="git" goto :git_done
+set "PATH=%PORTABLE%\git\cmd;%PATH%"
+:git_done
+if not "%PORTABLE_NODE%"=="1" goto :node_done
+echo       Node.js portable %NODE_VER% (PORTABLE_NODE=1) ...
+if exist "%PORTABLE%\node\node.exe" (
+    for /f %%v in ('"%PORTABLE%\node\node.exe" --version 2^>nul') do echo       OK: node %%v gia' presente
+    goto :node_done
+)
+call :download "%NODE_URL%" "%TEMP%\node-%STAMP%.zip" 20000000
+if errorlevel 1 (echo       ATTENZIONE: download Node fallito, continuo senza & goto :node_done)
+call :download "%NODE_SHA_URL%" "%TEMP%\node-%STAMP%.sha" 100
+if errorlevel 1 (echo       ATTENZIONE: SHASUMS256 non scaricato, Node ignorato & goto :node_done)
+call :verify_sha "%TEMP%\node-%STAMP%.zip" "%TEMP%\node-%STAMP%.sha" "node-v%NODE_VER%-win-x64.zip"
+if errorlevel 1 (echo       ERRORE: SHA256 di Node non corrisponde, file scartato & del /q "%TEMP%\node-%STAMP%.zip" & goto :node_done)
+call :unzip "%TEMP%\node-%STAMP%.zip" "%TEMP%\node-unz-%STAMP%"
+for /d %%d in ("%TEMP%\node-unz-%STAMP%\node-v*") do robocopy "%%d" "%PORTABLE%\node" /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NP >nul
+rmdir /s /q "%TEMP%\node-unz-%STAMP%" >nul 2>&1
+del /q "%TEMP%\node-%STAMP%.zip" "%TEMP%\node-%STAMP%.sha" >nul 2>&1
+for /f %%v in ('"%PORTABLE%\node\node.exe" --version 2^>nul') do echo       OK: node %%v verificato SHA256
+:node_done
 
 rem ============================ 3/7 BACKUP ===================================
 echo [3/7] Backup dei file personali in _backup\%STAMP% ...
@@ -108,12 +175,12 @@ goto :download_zip
 
 :update_git
 pushd "%INSTALL_DIR%"
-for /f %%s in ('git rev-parse --short HEAD 2^>nul') do set "OLD_SHA=%%s"
-git fetch --quiet origin "%BRANCH%" || (popd & goto :fail_download)
+for /f %%s in ('"%GIT%" rev-parse --short HEAD 2^>nul') do set "OLD_SHA=%%s"
+"%GIT%" fetch --quiet origin "%BRANCH%" || (popd & goto :fail_download)
 rem I file personali non sono tracciati: reset --hard non li tocca.
-git checkout --quiet -B "%BRANCH%" "origin/%BRANCH%" || (popd & goto :fail_download)
-git reset --quiet --hard "origin/%BRANCH%" || (popd & goto :fail_download)
-for /f %%s in ('git rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
+"%GIT%" checkout --quiet -B "%BRANCH%" "origin/%BRANCH%" || (popd & goto :fail_download)
+"%GIT%" reset --quiet --hard "origin/%BRANCH%" || (popd & goto :fail_download)
+for /f %%s in ('"%GIT%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
 popd
 if "%OLD_SHA%"=="%NEW_SHA%" (echo       gia' aggiornato: %NEW_SHA%) else (echo       aggiornato: %OLD_SHA% -^> %NEW_SHA%)
 goto :code_ok
@@ -121,9 +188,9 @@ goto :code_ok
 :clone_git
 rem Cartella esistente senza .git (es. installata da zip): clono a parte e sincronizzo.
 set "TMP_CLONE=%TEMP%\drop-monitor-clone-%STAMP%"
-git clone --quiet --depth 1 --branch "%BRANCH%" "https://github.com/%REPO%.git" "%TMP_CLONE%" || goto :fail_download
+"%GIT%" clone --quiet --depth 1 --branch "%BRANCH%" "https://github.com/%REPO%.git" "%TMP_CLONE%" || goto :fail_download
 call :sync_from "%TMP_CLONE%"
-for /f %%s in ('git -C "%TMP_CLONE%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
+for /f %%s in ('"%GIT%" -C "%TMP_CLONE%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
 rmdir /s /q "%TMP_CLONE%" >nul 2>&1
 echo       installato: %NEW_SHA%
 goto :code_ok
@@ -133,12 +200,9 @@ set "ZIP=%TEMP%\drop-monitor-%STAMP%.zip"
 set "UNZ=%TEMP%\drop-monitor-unzip-%STAMP%"
 set "ZIP_URL=https://github.com/%REPO%/archive/refs/heads/%BRANCH%.zip"
 echo       scarico %ZIP_URL%
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
-  "$h=@{}; if ($env:GITHUB_TOKEN) { $h['Authorization']='Bearer '+$env:GITHUB_TOKEN };" ^
-  "Invoke-WebRequest -Uri '%ZIP_URL%' -Headers $h -OutFile '%ZIP%';" ^
-  "if ((Get-Item '%ZIP%').Length -lt 10000) { throw 'zip troppo piccolo' };" ^
-  "Expand-Archive -Path '%ZIP%' -DestinationPath '%UNZ%' -Force"
+call :download "%ZIP_URL%" "%ZIP%" 10000
+if errorlevel 1 goto :fail_download
+call :unzip "%ZIP%" "%UNZ%"
 if errorlevel 1 goto :fail_download
 set "SRC="
 for /d %%d in ("%UNZ%\*") do set "SRC=%%~fd"
@@ -156,14 +220,20 @@ if not exist "%INSTALL_DIR%\requirements.txt" goto :fail_verify
 for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%INSTALL_DIR%\drop_monitor\__init__.py"') do set "APP_VER=%%~v"
 echo       versione app: %APP_VER%
 
-rem ============================ 5/7 VENV =====================================
-echo [5/7] Ambiente Python (.venv) e dipendenze ...
+rem ============================ 5/7 DIPENDENZE ===============================
 pushd "%INSTALL_DIR%"
-if not exist ".venv\Scripts\python.exe" %PY% -m venv .venv || (popd & goto :fail_venv)
-set "VPY=%INSTALL_DIR%\.venv\Scripts\python.exe"
+if "%PY_IS_PORTABLE%"=="1" (
+    echo [5/7] Dipendenze nel Python portable ...
+    set "VPY=%PORTABLE%\python\python.exe"
+) else (
+    echo [5/7] Ambiente Python (.venv) e dipendenze ...
+    if not exist ".venv\Scripts\python.exe" %PY% -m venv .venv || (popd & goto :fail_venv)
+    set "VPY=%INSTALL_DIR%\.venv\Scripts\python.exe"
+)
 "%VPY%" -m pip install --quiet --upgrade pip >nul 2>&1
 "%VPY%" -m pip install --quiet -r requirements.txt -r requirements-dev.txt || (popd & goto :fail_venv)
 "%VPY%" -m pip install --quiet -e . || (popd & goto :fail_venv)
+"%VPY%" -c "import drop_monitor, httpx, yaml, bs4, lxml" || (popd & goto :fail_venv)
 popd
 echo       OK
 
@@ -189,6 +259,9 @@ if exist "%BACKUP_DIR%" (
     echo commit=%NEW_SHA%
     echo app_version=%APP_VER%
     echo python=%PYVER%
+    echo python_exe=%VPY%
+    echo git=%GIT%
+    echo node=%PORTABLE%\node\node.exe
 )
 
 rem ============================ 7/7 SELF-TEST ================================
@@ -219,6 +292,7 @@ echo   2. (opzionale) adatta config.yaml: prodotti, intervallo, sorgenti
 echo   3. compila personal\order-profile.yaml con i dati per gli ordini (fase 2)
 echo   4. windows\test.bat    - prova senza inviare notifiche
 echo   5. windows\start.bat   - avvia il monitor
+echo   6. windows\ui.bat      - finestra di controllo (profili, registrazione account)
 echo.
 echo  Per aggiornare in futuro: rilancia questo stesso file. I file personali
 echo  vengono preservati e copiati anche in _backup\ (ultimi 5 backup).
@@ -226,6 +300,63 @@ echo ===========================================================================
 goto :end
 
 rem ============================ FUNZIONI =====================================
+:ensure_portable_python
+set "PP=%PORTABLE%\python"
+if exist "%PP%\python.exe" goto :pp_check
+call :download "%PY_URL%" "%TEMP%\python-embed-%STAMP%.zip" 9000000
+if errorlevel 1 exit /b 1
+call :unzip "%TEMP%\python-embed-%STAMP%.zip" "%PP%"
+del /q "%TEMP%\python-embed-%STAMP%.zip" >nul 2>&1
+if not exist "%PP%\python.exe" exit /b 1
+rem Abilita site-packages (il file ._pth lo disattiva di default) e aggiungi la cartella app.
+for %%f in ("%PP%\python*._pth") do (
+    > "%%~ff" (
+        echo python312.zip
+        echo .
+        echo ..\..
+        echo import site
+    )
+)
+if not exist "%PP%\Lib\site-packages" mkdir "%PP%\Lib\site-packages"
+:pp_check
+"%PP%\python.exe" -c "import sys; assert sys.version_info >= (3, %PY_MIN_MINOR%)" >nul 2>&1 || exit /b 1
+"%PP%\python.exe" -m pip --version >nul 2>&1
+if errorlevel 1 (
+    echo       installo pip nel Python portable ...
+    call :download "%PIP_URL%" "%TEMP%\get-pip-%STAMP%.py" 100000
+    if errorlevel 1 exit /b 1
+    "%PP%\python.exe" "%TEMP%\get-pip-%STAMP%.py" --quiet --no-warn-script-location || exit /b 1
+    del /q "%TEMP%\get-pip-%STAMP%.py" >nul 2>&1
+)
+set "PY="%PP%\python.exe""
+set "PY_IS_PORTABLE=1"
+exit /b 0
+
+:download
+rem :download URL DEST MIN_BYTES  -> errorlevel 1 se fallisce o file troppo piccolo
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
+  "$h=@{}; if ($env:GITHUB_TOKEN -and '%~1'.Contains('github.com')) { $h['Authorization']='Bearer '+$env:GITHUB_TOKEN };" ^
+  "Invoke-WebRequest -Uri '%~1' -Headers $h -OutFile '%~2' -UseBasicParsing;" ^
+  "if ((Get-Item '%~2').Length -lt %~3) { throw 'file troppo piccolo: download incompleto' }"
+if errorlevel 1 (echo       download fallito: %~1 & exit /b 1)
+exit /b 0
+
+:unzip
+rem :unzip ZIP DEST
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Expand-Archive -Path '%~1' -DestinationPath '%~2' -Force"
+if errorlevel 1 (echo       estrazione fallita: %~1 & exit /b 1)
+exit /b 0
+
+:verify_sha
+rem :verify_sha FILE SHASUMS_TXT NAME_IN_LIST
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ErrorActionPreference='Stop'; $want=(Get-Content '%~2' | Where-Object { $_ -match '\s%~3$' }) -split '\s+' | Select-Object -First 1;" ^
+  "if (-not $want) { throw 'hash non trovato nella lista' }; $got=(Get-FileHash '%~1' -Algorithm SHA256).Hash.ToLower();" ^
+  "if ($got -ne $want.ToLower()) { throw ('SHA256 diverso: ' + $got) }"
+if errorlevel 1 exit /b 1
+exit /b 0
+
 :find_python
 for %%c in ("py -3.13" "py -3.12" "py -3.11" "py -3" "python" "python3") do (
     if not defined PY call :try_python %%~c
@@ -244,7 +375,7 @@ exit /b 0
 :sync_from
 rem Copia il codice da %1 nella cartella di installazione, senza toccare i file preservati.
 robocopy "%~1" "%INSTALL_DIR%" /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NP ^
-    /XD "%~1\.git" "%INSTALL_DIR%\.git" "%INSTALL_DIR%\.venv" "%INSTALL_DIR%\data" "%INSTALL_DIR%\personal" "%INSTALL_DIR%\_backup" ^
+    /XD "%~1\.git" "%INSTALL_DIR%\.git" "%INSTALL_DIR%\.venv" "%INSTALL_DIR%\data" "%INSTALL_DIR%\personal" "%INSTALL_DIR%\_backup" "%INSTALL_DIR%\portable" ^
     /XF config.yaml .env setup.local.bat install-info.txt >nul
 if errorlevel 8 goto :fail_download
 exit /b 0

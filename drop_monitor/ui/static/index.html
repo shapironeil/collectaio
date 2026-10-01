@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>collectaio</title>
+<style>
+  :root{
+    --bg:#070A14; --bg2:#0d1226;
+    --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.10); --stroke:rgba(255,255,255,.14); --stroke-2:rgba(255,255,255,.26);
+    --text:#F3F5FA; --muted:rgba(243,245,250,.62); --faint:rgba(243,245,250,.38);
+    --accent:#7C8CFF; --accent-2:#B388FF; --green:#30D158; --amber:#FFB340; --red:#FF5A5F; --blue:#4CB3FF;
+    --radius:26px; --radius-s:16px; --shadow:0 20px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  :root[data-theme="light"]{
+    --bg:#E9EDF7; --bg2:#F6F8FF;
+    --glass:rgba(255,255,255,.55); --glass-2:rgba(255,255,255,.75); --stroke:rgba(20,30,60,.10); --stroke-2:rgba(20,30,60,.20);
+    --text:#0B1020; --muted:rgba(11,16,32,.62); --faint:rgba(11,16,32,.4);
+    --shadow:0 18px 50px rgba(30,40,90,.16), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI",Inter,Roboto,sans-serif;color:var(--text);background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased}
+  .blobs{position:fixed;inset:0;z-index:0;overflow:hidden;background:radial-gradient(1200px 800px at 80% -10%,var(--bg2),transparent 60%)}
+  .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55;animation:float 18s ease-in-out infinite}
+  .b1{width:520px;height:520px;left:-120px;top:-120px;background:#5B6CFF}
+  .b2{width:460px;height:460px;right:-100px;top:10%;background:#B04DFF;animation-delay:-6s}
+  .b3{width:420px;height:420px;left:35%;bottom:-180px;background:#19C6D8;animation-delay:-12s}
+  :root[data-theme="light"] .blob{opacity:.35}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-30px) scale(1.08)}}
+
+  .app{position:relative;z-index:1;display:grid;grid-template-columns:240px 1fr;height:100%;gap:18px;padding:18px}
+  .glass{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--radius);backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);box-shadow:var(--shadow)}
+  .side{display:flex;flex-direction:column;padding:22px 16px;gap:8px}
+  .brand{display:flex;align-items:center;gap:12px;padding:6px 10px 18px}
+  .logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 8px 24px rgba(124,140,255,.45);display:grid;place-items:center;font-weight:800;color:#fff}
+  .brand b{font-size:17px;letter-spacing:.2px} .brand small{display:block;color:var(--faint);font-size:11px;font-weight:500}
+  .nav{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;color:var(--muted);cursor:pointer;font-weight:600;font-size:14px;transition:.18s;border:1px solid transparent;user-select:none}
+  .nav:hover{background:var(--glass-2);color:var(--text)} .nav.active{background:var(--glass-2);color:var(--text);border-color:var(--stroke)}
+  .nav .ic{width:22px;text-align:center;font-size:16px}
+  .side .spacer{flex:1}
+  .health{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);padding:12px 14px;border-radius:14px;background:var(--glass)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);box-shadow:0 0 0 0 transparent} .dot.ok{background:var(--green);box-shadow:0 0 14px var(--green)} .dot.bad{background:var(--red);box-shadow:0 0 14px var(--red)}
+
+  .main{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:22px 28px 0}
+  h1{margin:0;font-size:26px;letter-spacing:-.4px;font-weight:700} .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .content{padding:20px 28px 28px;overflow:auto;flex:1}
+  .grid{display:grid;gap:16px} .cols-4{grid-template-columns:repeat(4,1fr)} .cols-2{grid-template-columns:1fr 1fr} .cols-3{grid-template-columns:repeat(3,1fr)}
+  @media (max-width:1100px){.cols-4{grid-template-columns:repeat(2,1fr)} .cols-3,.cols-2{grid-template-columns:1fr}}
+  .card{padding:20px 22px} .card h3{margin:0 0 14px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+  .stat .v{font-size:30px;font-weight:700;letter-spacing:-.6px;margin-top:4px} .stat .l{color:var(--muted);font-size:13px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--stroke);background:var(--glass)}
+  .pill.available{color:var(--green);border-color:rgba(48,209,88,.4);background:rgba(48,209,88,.12)}
+  .pill.present_unavailable{color:var(--amber);border-color:rgba(255,179,64,.4);background:rgba(255,179,64,.12)}
+  .pill.absent{color:var(--muted)}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--stroke)} .row:first-of-type{border-top:0}
+  .row .t{font-weight:600;font-size:15px} .row .m{color:var(--muted);font-size:12px;margin-top:3px} .row a{color:var(--blue);text-decoration:none}
+  .btn{appearance:none;border:1px solid var(--stroke-2);background:var(--glass-2);color:var(--text);padding:11px 18px;border-radius:999px;font-weight:600;font-size:14px;cursor:pointer;transition:.18s;backdrop-filter:blur(10px)}
+  .btn:hover{transform:translateY(-1px);background:var(--stroke)} .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff;box-shadow:0 10px 30px rgba(124,140,255,.35)}
+  .btn.danger{color:var(--red)} .btn.sm{padding:8px 14px;font-size:13px}
+  .field{display:flex;flex-direction:column;gap:6px} .field label{font-size:12px;color:var(--muted);font-weight:600}
+  .field input,.field select{appearance:none;width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font-size:14px;outline:none;transition:.18s;font-family:inherit}
+  .field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(124,140,255,.18)} .field input.bad{border-color:var(--red)}
+  .field select option{color:#000}
+  .form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px} .form .full{grid-column:1/-1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px} .chip{padding:8px 14px;border-radius:999px;border:1px solid var(--stroke);background:var(--glass);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)} .chip.active{color:var(--text);border-color:var(--accent);background:rgba(124,140,255,.16)}
+  .switch{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer} .switch input{width:44px;height:26px;appearance:none;background:var(--stroke);border-radius:999px;position:relative;transition:.2s;cursor:pointer;margin:0} .switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 6px rgba(0,0,0,.3)} .switch input:checked{background:var(--green)} .switch input:checked::after{left:21px}
+  .captcha{display:flex;align-items:center;gap:16px;padding:14px;border-radius:18px;background:var(--glass);border:1px dashed var(--stroke-2)} .captcha img{border-radius:12px;background:#fff;min-width:200px;height:70px;image-rendering:crisp-edges}
+  .note{font-size:12px;color:var(--muted);line-height:1.5} .ok{color:var(--green)} .err{color:var(--red)} .warn{color:var(--amber)}
+  .kv{display:grid;grid-template-columns:220px 1fr;gap:6px 14px;font-size:13px} .kv div:nth-child(odd){color:var(--muted)} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--glass);padding:2px 6px;border-radius:6px;word-break:break-all}
+  .toast{position:fixed;right:28px;bottom:28px;z-index:9;padding:14px 18px;border-radius:16px;font-weight:600;transform:translateY(20px);opacity:0;transition:.25s;pointer-events:none} .toast.show{transform:none;opacity:1}
+  .timeline .row{padding:10px 0} .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px} .step{padding:12px 14px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke);font-size:12px;color:var(--muted)} .step b{display:block;color:var(--text);font-size:13px;margin-bottom:2px} .step.done{border-color:rgba(48,209,88,.5)} .step.cur{border-color:var(--accent)}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="blobs"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div class="app">
+  <aside class="side glass">
+    <div class="brand"><div class="logo">C</div><div><b>collectaio</b><small id="ver">drop-monitor</small></div></div>
+    <div class="nav active" data-view="dashboard"><span class="ic">◎</span>Dashboard</div>
+    <div class="nav" data-view="tasks"><span class="ic">▣</span>Tasks</div>
+    <div class="nav" data-view="profiles"><span class="ic">◉</span>Profili</div>
+    <div class="nav" data-view="account"><span class="ic">✦</span>Account</div>
+    <div class="nav" data-view="settings"><span class="ic">⚙</span>Impostazioni</div>
+    <div class="spacer"></div>
+    <div class="nav" id="theme"><span class="ic">◐</span>Tema</div>
+    <div class="health"><span class="dot" id="hdot"></span><span id="htext">controllo…</span></div>
+  </aside>
+
+  <main class="main glass">
+    <div class="top"><div><h1 id="title">Dashboard</h1><div class="sub" id="subtitle">monitor drop e restock</div></div><div><button class="btn sm" id="refresh">Aggiorna</button></div></div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <section id="view-dashboard">
+        <div class="grid cols-4" style="margin-bottom:16px">
+          <div class="card glass stat"><div class="l">Tasks attivi</div><div class="v" id="s-tasks">–</div></div>
+          <div class="card glass stat"><div class="l">Disponibili ora</div><div class="v ok" id="s-avail">–</div></div>
+          <div class="card glass stat"><div class="l">Catalogo osservato</div><div class="v" id="s-seen">–</div></div>
+          <div class="card glass stat"><div class="l">Ultimo check</div><div class="v" id="s-last" style="font-size:20px">–</div></div>
+        </div>
+        <div class="grid cols-2">
+          <div class="card glass"><h3>Prodotti osservati</h3><div id="tracked"></div></div>
+          <div class="card glass timeline"><h3>Eventi recenti</h3><div id="events"></div></div>
+        </div>
+      </section>
+
+      <!-- TASKS -->
+      <section id="view-tasks" class="hidden">
+        <div class="grid cols-2">
+          <div class="card glass"><h3>Tasks (da config.yaml → products)</h3><div id="tasks"></div><p class="note" style="margin-top:12px">Modalità attuale: <b>Monitor</b>. La modalità <b>Auto-checkout</b> arriva nella fase 2 e userà un profilo per task.</p></div>
+          <div class="card glass"><h3>Sorgenti e polling</h3><div id="sources"></div><div class="kv" id="polling" style="margin-top:12px"></div></div>
+        </div>
+      </section>
+
+      <!-- PROFILES -->
+      <section id="view-profiles" class="hidden">
+        <div class="chips" id="profile-chips"></div>
+        <div class="grid cols-2">
+          <div class="card glass">
+            <h3>Account e spedizione</h3>
+            <div class="form">
+              <div class="field"><label>Nome profilo</label><input id="p-name" placeholder="default"></div>
+              <div class="field"><label>E-mail account</label><input id="p-email" type="email" autocomplete="off"></div>
+              <div class="field"><label>Password account (salvata in .env)</label><input id="p-password" type="password" placeholder="•••••• (lascia vuoto per non cambiarla)" autocomplete="new-password"></div>
+              <div class="field"><label>Telefono</label><input id="p-phone"></div>
+              <div class="field"><label>Nome</label><input id="p-first"></div>
+              <div class="field"><label>Cognome</label><input id="p-last"></div>
+              <div class="field full"><label>Indirizzo</label><input id="p-address1"></div>
+              <div class="field full"><label>Indirizzo (riga 2)</label><input id="p-address2"></div>
+              <div class="field"><label>CAP</label><input id="p-zip"></div>
+              <div class="field"><label>Città</label><input id="p-city"></div>
+              <div class="field"><label>Nazione</label><select id="p-country"><option value="46">Italy</option></select></div>
+              <div class="field"><label>Provincia</label><select id="p-province"><option value="0">carica dal sito…</option></select></div>
+              <div class="field full"><label>Ragione sociale (facoltativo)</label><input id="p-company"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card glass" style="margin-bottom:16px">
+              <h3>Fatturazione (facoltativo)</h3>
+              <div class="form">
+                <div class="field"><label>Codice fiscale</label><input id="p-cf"></div>
+                <div class="field"><label>Partita IVA</label><input id="p-vat"></div>
+                <div class="field"><label>Codice SDI</label><input id="p-sdi"></div>
+                <div class="field"><label>PEC</label><input id="p-pec"></div>
+              </div>
+            </div>
+            <div class="card glass">
+              <h3>Preferenze ordine (fase 2)</h3>
+              <div class="form">
+                <div class="field"><label>Quantità max per ordine</label><input id="p-qty" type="number" min="1"></div>
+                <div class="field"><label>Spesa massima (€)</label><input id="p-max" type="number" min="0"></div>
+                <div class="field"><label>Metodo pagamento</label><input id="p-pay" placeholder="es. PayPal"></div>
+                <div class="field"><label>Come ci hai conosciuto (registrazione)</label><select id="p-ref"><option value="">non indicato</option></select></div>
+                <label class="switch full"><input type="checkbox" id="p-confirm"> Chiedi conferma su Telegram prima dell'ordine</label>
+                <label class="switch full"><input type="checkbox" id="p-news"> Newsletter del negozio</label>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+                <button class="btn primary" id="p-save">Salva profilo</button>
+                <button class="btn" id="p-new">Nuovo profilo</button>
+                <button class="btn danger" id="p-delete">Elimina</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACCOUNT / REGISTRATION HARVESTER -->
+      <section id="view-account" class="hidden">
+        <div class="steps">
+          <div class="step cur" id="st1"><b>1 · Profilo</b>scegli chi registrare</div>
+          <div class="step" id="st2"><b>2 · Modulo</b>scarica il form dal sito</div>
+          <div class="step" id="st3"><b>3 · Captcha</b>leggi l'immagine e rispondi</div>
+          <div class="step" id="st4"><b>4 · Registra</b>invio e verifica esito</div>
+        </div>
+        <div class="grid cols-2">
+          <div class="card glass">
+            <h3>Registrazione sul negozio</h3>
+            <div class="form">
+              <div class="field"><label>Profilo</label><select id="r-profile"></select></div>
+              <div class="field"><label>Password account (min 6)</label><input id="r-password" type="password" autocomplete="new-password" placeholder="dal profilo, se salvata"></div>
+              <div class="field full"><button class="btn" id="r-load">Carica modulo dal sito</button></div>
+              <div class="full"><div id="r-fields" class="note">Il modulo non è ancora stato caricato.</div></div>
+              <div class="full captcha hidden" id="r-captcha-box">
+                <img id="r-captcha" alt="captcha">
+                <div style="flex:1" class="field"><label>Risposta captcha</label><input id="r-captcha-answer" autocomplete="off" autocorrect="off" spellcheck="false"></div>
+                <button class="btn sm" id="r-captcha-refresh">↻</button>
+              </div>
+              <label class="switch full"><input type="checkbox" id="r-news"> Ricevi la newsletter</label>
+              <label class="switch full"><input type="checkbox" id="r-consent"> Accetto privacy, condizioni di vendita e informativa di registrazione del negozio</label>
+              <label class="switch full"><input type="checkbox" id="r-savepw" checked> Salva la password nel profilo (.env) se la registrazione va a buon fine</label>
+              <div class="full" style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn" id="r-preview" disabled>Anteprima dati inviati</button>
+                <button class="btn primary" id="r-submit" disabled>Registra account</button>
+                <a class="btn" id="r-open" target="_blank" rel="noopener">Apri sul sito</a>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card glass" style="margin-bottom:16px"><h3>Esito</h3><div id="r-result" class="note">Nessuna registrazione inviata.</div></div>
+            <div class="card glass"><h3>Dati che il sito riceverà</h3><div id="r-payload" class="kv"><div class="note" style="grid-column:1/-1">Carica il modulo e premi “Anteprima”.</div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" class="hidden">
+        <div class="grid cols-2">
+          <div class="card glass"><h3>Configurazione attiva</h3><div class="kv" id="cfg"></div><p class="note" style="margin-top:12px">Modifica <code>config.yaml</code> e <code>.env</code> nella cartella di installazione, poi riavvia il monitor. I profili stanno in <code>personal\</code> e sopravvivono agli aggiornamenti.</p></div>
+          <div class="card glass"><h3>Come usare</h3><div class="note">
+            <p><b>Monitor</b>: <code>windows\start.bat</code> avvia il polling; notifiche Telegram solo sui cambi di stato; <code>/status</code> dal bot.</p>
+            <p><b>Profili</b>: uno per ogni account/indirizzo (come in Cyber AIO). Le password finiscono solo in <code>.env</code>.</p>
+            <p><b>Account</b>: la registrazione sul negozio richiede un captcha a immagine: lo vedi qui e lo risolvi tu, il resto lo compila la finestra con i dati del profilo. Nessun captcha viene mai risolto in automatico.</p>
+            <p><b>Fase 2</b>: tasks con auto-checkout per profilo, limiti di spesa, conferma Telegram.</p>
+          </div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="toast glass" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = async (path, opt={}) => {
+  const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opt, body: opt.body ? JSON.stringify(opt.body) : undefined});
+  const j = await r.json().catch(()=>({error:'risposta non valida'}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+};
+const toast = (msg, cls='') => { const t=$('#toast'); t.textContent=msg; t.className='toast glass show '+cls; setTimeout(()=>t.classList.remove('show'), 3200); };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ago = iso => { if(!iso) return 'mai'; const s=Math.round((Date.now()-new Date(iso))/1000); if(s<90) return s+'s fa'; if(s<5400) return Math.round(s/60)+'m fa'; return Math.round(s/3600)+'h fa'; };
+const STATE = {available:'Disponibile', present_unavailable:'Esaurito', absent:'Non presente'};
+
+// ---- theme + navigation
+const root=document.documentElement;
+try{ root.dataset.theme = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'); }catch(e){ root.dataset.theme='dark'; }
+$('#theme').onclick=()=>{ root.dataset.theme = root.dataset.theme==='light'?'dark':'light'; try{localStorage.setItem('theme',root.dataset.theme)}catch(e){} };
+const TITLES={dashboard:['Dashboard','monitor drop e restock'],tasks:['Tasks','cosa osserviamo e dove'],profiles:['Profili','account, indirizzi e preferenze d’ordine'],account:['Account','registrazione assistita sul negozio'],settings:['Impostazioni','configurazione e guida']};
+document.querySelectorAll('.nav[data-view]').forEach(n=>n.onclick=()=>show(n.dataset.view));
+function show(v){ document.querySelectorAll('.nav[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===v)); document.querySelectorAll('section[id^=view-]').forEach(s=>s.classList.toggle('hidden',s.id!=='view-'+v)); $('#title').textContent=TITLES[v][0]; $('#subtitle').textContent=TITLES[v][1]; if(v==='profiles') loadProfiles(); if(v==='account') fillRegisterProfiles(); }
+
+// ---- dashboard / tasks / settings
+let status=null;
+async function loadStatus(){
+  try{ status = await api('/api/status'); }catch(e){ $('#htext').textContent='UI non raggiunge il server'; return; }
+  $('#ver').textContent='drop-monitor '+status.version;
+  $('#hdot').className='dot '+(status.health.ok?'ok':'bad'); $('#htext').textContent=status.health.ok?'monitor attivo':'monitor fermo';
+  $('#s-tasks').textContent=status.watches.length; $('#s-seen').textContent=status.seen;
+  $('#s-avail').textContent=status.tracked.filter(t=>t.state==='available').length;
+  const last=status.tracked.map(t=>t.last_checked).filter(Boolean).sort().pop(); $('#s-last').textContent=ago(last);
+  $('#tracked').innerHTML = status.tracked.length ? status.tracked.map(t=>`<div class="row"><div><div class="t">${esc(t.title||t.label)}</div><div class="m">${t.price?esc(t.price)+' · ':''}visto ${ago(t.last_seen)} · check ${ago(t.last_checked)} ${t.url?`· <a href="${esc(t.url)}" target="_blank" rel="noopener">pagina</a>`:''}</div></div><span class="pill ${t.state}">${STATE[t.state]||t.state}</span></div>`).join('') : '<div class="note">Nessuna osservazione ancora: avvia il monitor.</div>';
+  $('#events').innerHTML = status.events.length ? status.events.map(e=>`<div class="row"><div><div class="t" style="font-size:13px">${esc(e.watch_key)}</div><div class="m">${esc(e.old_state||'—')} → <b>${esc(e.new_state)}</b> ${e.price?'· '+esc(e.price):''} · ${esc(e.note||'')}</div></div><span class="note">${ago(e.ts)}</span></div>`).join('') : '<div class="note">Ancora nessun evento.</div>';
+  $('#tasks').innerHTML = status.watches.map(w=>`<div class="row"><div><div class="t">${esc(w.label)}</div><div class="m">chiavi: ${esc(w.keywords)}${w.exclude&&w.exclude.length?' · esclude: '+esc(w.exclude.join(', ')):''}${w.url?' · URL fissato':''}</div></div><span class="pill">Monitor</span></div>`).join('');
+  $('#sources').innerHTML = status.sources.map(s=>`<div class="row"><div><div class="t" style="font-size:13px">${esc(s.type)}</div><div class="m"><code>${esc(s.url)}</code></div></div></div>`).join('');
+  $('#polling').innerHTML = `<div>Intervallo</div><div>${status.polling.min}–${status.polling.max} s</div><div>Hot ratio</div><div>${status.polling.hot_ratio} pagine prodotto per ogni lista</div><div>Telegram</div><div>${status.telegram.enabled?'attivo · chat '+esc(status.telegram.chat_id):'disattivato'}</div>`;
+  $('#cfg').innerHTML = `<div>Sito</div><div><code>${esc(status.site)}</code></div><div>Health</div><div>${esc(status.health.message)}</div><div>Tasks</div><div>${status.watches.length}</div><div>Sorgenti</div><div>${status.sources.length}</div><div>Telegram</div><div>${status.telegram.enabled?'attivo':'off'}</div>`;
+}
+$('#refresh').onclick=()=>{loadStatus();toast('Aggiornato')};
+
+// ---- profiles
+let profiles=[], current='default', provinces={};
+const P = {
+  read(){ return {account:{email:$('#p-email').value.trim()}, shipping:{first_name:$('#p-first').value.trim(), last_name:$('#p-last').value.trim(), company:$('#p-company').value.trim(), address1:$('#p-address1').value.trim(), address2:$('#p-address2').value.trim(), zip:$('#p-zip').value.trim(), city:$('#p-city').value.trim(), province:$('#p-province').selectedOptions[0]?.textContent||'', province_id:+$('#p-province').value||0, country:$('#p-country').selectedOptions[0]?.textContent||'', country_id:+$('#p-country').value||46, phone:$('#p-phone').value.trim()}, billing:{fiscal_code:$('#p-cf').value.trim(), vat_number:$('#p-vat').value.trim(), sdi_code:$('#p-sdi').value.trim(), pec:$('#p-pec').value.trim()}, preferences:{max_quantity_per_order:+$('#p-qty').value||1, max_total_eur:+$('#p-max').value||0, payment_method:$('#p-pay').value.trim(), referral:$('#p-ref').value, confirm_on_telegram:$('#p-confirm').checked, newsletter:$('#p-news').checked}}; },
+  write(p){ $('#p-name').value=p.name; $('#p-name').disabled = p.name==='default' || profiles.some(x=>x.name===p.name); $('#p-email').value=p.account.email||''; $('#p-password').value=''; $('#p-password').placeholder = p.has_password?'•••••• salvata (lascia vuoto per non cambiarla)':'nessuna password salvata'; const s=p.shipping; $('#p-first').value=s.first_name; $('#p-last').value=s.last_name; $('#p-company').value=s.company; $('#p-address1').value=s.address1; $('#p-address2').value=s.address2; $('#p-zip').value=s.zip; $('#p-city').value=s.city; $('#p-phone').value=s.phone; $('#p-country').value=String(s.country_id||46); setProvince(s.province_id, s.province); const b=p.billing; $('#p-cf').value=b.fiscal_code; $('#p-vat').value=b.vat_number; $('#p-sdi').value=b.sdi_code; $('#p-pec').value=b.pec; const f=p.preferences; $('#p-qty').value=f.max_quantity_per_order; $('#p-max').value=f.max_total_eur; $('#p-pay').value=f.payment_method; $('#p-ref').value=f.referral||''; $('#p-confirm').checked=!!f.confirm_on_telegram; $('#p-news').checked=!!f.newsletter; }
+};
+const REFERRALS=[['1','Google'],['2','Facebook'],['3','Instagram'],['4','TikTok'],['5','Passaparola'],['7','Giornali, Riviste o Volantini'],['8','Clienti Gemcard Infinity Collection']];
+$('#p-ref').innerHTML='<option value="">non indicato</option>'+REFERRALS.map(([v,l])=>`<option value="${v}">${esc(l)}</option>`).join('');
+async function setProvince(id, name){
+  const c=$('#p-country').value;
+  if(!provinces[c]){ try{ provinces[c]=await api('/api/states?country='+c); }catch(e){ provinces[c]=[]; $('#p-province').innerHTML=`<option value="${id||0}">${esc(name||'(sito non raggiungibile)')}</option>`; return; } }
+  $('#p-province').innerHTML='<option value="0">— seleziona —</option>'+provinces[c].map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  if(id) $('#p-province').value=String(id); else if(name){ const m=provinces[c].find(s=>s.name.toLowerCase()===name.toLowerCase()); if(m) $('#p-province').value=String(m.id); }
+}
+$('#p-country').onchange=()=>setProvince(0,'');
+async function loadProfiles(){
+  try{ profiles=(await api('/api/profiles')).profiles; }catch(e){ toast(e.message,'err'); return; }
+  renderChips(); const p=profiles.find(x=>x.name===current)||profiles[0]; current=p.name; P.write(p);
+}
+function renderChips(){ $('#profile-chips').innerHTML=profiles.map(p=>`<span class="chip ${p.name===current?'active':''}" data-n="${esc(p.name)}">${esc(p.name)}${p.has_password?' 🔑':''}</span>`).join(''); document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{current=c.dataset.n; renderChips(); P.write(profiles.find(x=>x.name===current));}); }
+$('#p-new').onclick=()=>{ const name=prompt('Nome del nuovo profilo (minuscole, numeri, - _):','profilo2'); if(!name) return; const n=name.trim().toLowerCase(); if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(n)){toast('Nome non valido','err');return;} current=n; const blank=JSON.parse(JSON.stringify(profiles.find(x=>x.name==='default'))); blank.name=n; blank.has_password=false; blank.account.email=''; profiles.push(blank); renderChips(); P.write(blank); $('#p-name').disabled=false; };
+$('#p-save').onclick=async()=>{ const name=($('#p-name').value||'default').trim().toLowerCase(); const body=P.read(); const pw=$('#p-password').value; if(pw) body.password=pw; try{ const saved=await api('/api/profiles/'+encodeURIComponent(name),{method:'PUT',body}); current=name; await loadProfiles(); toast('Profilo "'+saved.name+'" salvato','ok'); }catch(e){ toast(e.message,'err'); } };
+$('#p-delete').onclick=async()=>{ if(current==='default'){toast('Il profilo default non si elimina','warn');return;} if(!confirm('Eliminare il profilo "'+current+'"?')) return; try{ await api('/api/profiles/'+encodeURIComponent(current),{method:'DELETE'}); current='default'; await loadProfiles(); toast('Profilo eliminato'); }catch(e){ toast(e.message,'err'); } };
+
+// ---- account registration (captcha harvester)
+let form=null;
+function step(n){ ['st1','st2','st3','st4'].forEach((id,i)=>{ const el=$('#'+id); el.classList.toggle('done',i<n-1); el.classList.toggle('cur',i===n-1); }); }
+async function fillRegisterProfiles(){ if(!profiles.length){ try{ profiles=(await api('/api/profiles')).profiles; }catch(e){} } $('#r-profile').innerHTML=profiles.map(p=>`<option value="${esc(p.name)}">${esc(p.name)} — ${esc(p.account.email||'senza e-mail')}</option>`).join(''); $('#r-profile').value=current; const site=status?status.site:''; $('#r-open').href=site+'/it/register?returnurl=%2fit%2fcart'; checkProfile(); }
+function checkProfile(){ const p=profiles.find(x=>x.name===$('#r-profile').value); if(!p) return; const need={ 'E-mail':p.account.email,'Nome':p.shipping.first_name,'Cognome':p.shipping.last_name,'Indirizzo':p.shipping.address1,'CAP':p.shipping.zip,'Città':p.shipping.city,'Provincia':p.shipping.province_id,'Telefono':p.shipping.phone }; const missing=Object.entries(need).filter(([k,v])=>!v).map(([k])=>k); const pw = $('#r-password').value || (p.has_password?'saved':''); $('#r-fields').innerHTML = (missing.length?`<span class="warn">Mancano nel profilo: ${esc(missing.join(', '))}</span> — completa in <b>Profili</b>.`:`<span class="ok">Profilo completo.</span>`) + (pw?'':' <span class="warn">Serve una password (min 6).</span>') + (form?`<br>Modulo caricato: ${form.fields.length} campi, ${form.has_captcha?'captcha presente':'nessun captcha'}, consensi: ${form.consents.length}.`:''); const ready=!missing.length && !!pw && !!form; $('#r-preview').disabled=!form; $('#r-submit').disabled=!(ready && $('#r-consent').checked && (!form.has_captcha || $('#r-captcha-answer').value.trim())); }
+['#r-profile','#r-password','#r-consent','#r-captcha-answer'].forEach(s=>{ $(s).addEventListener('input',checkProfile); $(s).addEventListener('change',checkProfile); });
+$('#r-load').onclick=async()=>{ $('#r-load').disabled=true; try{ form=await api('/api/register/start',{method:'POST'}); step(form.has_captcha?3:4); if(form.has_captcha){ $('#r-captcha-box').classList.remove('hidden'); $('#r-captcha').src='/api/register/captcha?'+Date.now(); } $('#r-news').checked = !!(profiles.find(x=>x.name===$('#r-profile').value)?.preferences.newsletter); toast('Modulo caricato dal sito','ok'); }catch(e){ toast(e.message,'err'); } finally{ $('#r-load').disabled=false; checkProfile(); } };
+$('#r-captcha-refresh').onclick=async()=>{ try{ await api('/api/register/refresh',{method:'POST'}); $('#r-captcha').src='/api/register/captcha?'+Date.now(); $('#r-captcha-answer').value=''; checkProfile(); }catch(e){ toast(e.message,'err'); } };
+const regBody=()=>({profile:$('#r-profile').value, password:$('#r-password').value, captcha_answer:$('#r-captcha-answer').value, newsletter:$('#r-news').checked, save_password:$('#r-savepw').checked});
+$('#r-preview').onclick=async()=>{ try{ const r=await api('/api/register/preview',{method:'POST',body:regBody()}); if(!r.ok){ $('#r-payload').innerHTML=`<div class="err" style="grid-column:1/-1">${esc(r.error)}</div>`; return; } $('#r-payload').innerHTML=`<div>POST</div><div><code>${esc(r.action)}</code></div>`+Object.entries(r.payload).map(([k,v])=>`<div>${esc(k)}</div><div>${esc(v)||'<i class="note">vuoto</i>'}</div>`).join(''); }catch(e){ toast(e.message,'err'); } };
+$('#r-submit').onclick=async()=>{ if(!confirm('Inviare la registrazione al negozio con i dati del profilo "'+$('#r-profile').value+'"?')) return; $('#r-submit').disabled=true; $('#r-result').innerHTML='Invio in corso…'; try{ const r=await api('/api/register/submit',{method:'POST',body:regBody()}); $('#r-result').innerHTML=`<div class="${r.ok?'ok':'err'}"><b>${esc(r.message)}</b></div>`+(r.errors&&r.errors.length?'<ul>'+r.errors.map(e=>`<li>${esc(e)}</li>`).join('')+'</ul>':'')+(r.final_url?`<div class="note">pagina finale: <code>${esc(r.final_url)}</code></div>`:''); if(r.ok){ step(4); $('#st4').classList.add('done'); toast('Registrazione inviata','ok'); } else { toast('Registrazione rifiutata','err'); $('#r-captcha-refresh').click(); } }catch(e){ $('#r-result').innerHTML=`<div class="err">${esc(e.message)}</div>`; } finally{ checkProfile(); } };
+
+loadStatus(); setInterval(loadStatus, 15000);
+</script>
+</body>
+</html>
