@@ -120,7 +120,7 @@ if exist "%VER_TMP%" (
     for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
     del /q "%VER_TMP%" >nul 2>&1
 )
-if "%REMOTE_VER%"=="-" if "%CHECK_ONLY%"=="0" call :ask_token
+if "%CHECK_ONLY%"=="0" call :ensure_token
 if "%REMOTE_VER%"=="-" (
     echo       versione disponibile: non verificabile ^(GitHub non raggiungibile o token mancante^)
 ) else if "%REMOTE_VER%"=="%INSTALLED_VER%" (
@@ -232,7 +232,7 @@ rem ============================ 4/7 CODICE ===================================
 echo [4/7] Scarico/aggiorno il codice ...
 set "OLD_SHA=-"
 set "NEW_SHA=-"
-if not defined GITHUB_TOKEN call :ask_token
+call :ensure_token
 set "GIT_AUTH="
 if defined GITHUB_TOKEN set GIT_AUTH=-c "http.extraheader=AUTHORIZATION: bearer %GITHUB_TOKEN%"
 if not defined GITHUB_TOKEN echo       nessun token: il repository privato non sara' scaricabile
@@ -467,49 +467,77 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 if errorlevel 1 (echo       download fallito: %~1 & exit /b 1)
 exit /b 0
 
-:ask_token
-rem Il repository e' privato: senza token GitHub risponde 404 e git resterebbe in attesa di credenziali.
-if defined GITHUB_TOKEN (
-    echo       il token GitHub salvato non funziona ^(scaduto o senza permesso Contents: Read^)
-) else (
-    echo       il repository %REPO% e' privato: serve un token GitHub.
+:ensure_token
+rem Verifica che il token acceda al repository; altrimenti lo chiede (max 3 tentativi) e lo salva.
+set "TRIES=0"
+:ensure_token_loop
+call :check_token
+if "!TOKEN_STATUS!"=="ok" (
+    if "!TOKEN_SAVED!"=="0" call :save_token
+    if "%REMOTE_VER%"=="-" call :fetch_remote_version
+    exit /b 0
 )
-echo       Crealo su https://github.com/settings/personal-access-tokens ^(Fine-grained, repo %REPO%, Contents: Read^).
+if "!TOKEN_STATUS!"=="norepo" echo       token valido per l'utente !TOKEN_USER! ma SENZA accesso a %REPO%:
+if "!TOKEN_STATUS!"=="norepo" echo       nel token metti "Repository access: Only select repositories" -^> %REPO% e "Contents: Read-only"
+if "!TOKEN_STATUS!"=="invalid" echo       token non valido o scaduto ^(GitHub risponde 401^)
+if "!TOKEN_STATUS!"=="none" echo       il repository %REPO% e' privato: serve un token GitHub
+if "!TOKEN_STATUS!"=="offline" (echo       GitHub non raggiungibile: impossibile verificare il token & exit /b 1)
+set /a TRIES+=1
+if !TRIES! GTR 3 (echo       troppi tentativi: continuo senza token & exit /b 1)
+echo       Crealo/modificalo su https://github.com/settings/personal-access-tokens
+echo       ^(Fine-grained, Repository access: Only select repositories -^> %REPO%, Permissions: Contents Read-only^)
 set "NEW_TOKEN="
 set /p "NEW_TOKEN=      Incolla il token e premi INVIO (INVIO vuoto per continuare senza): "
-if "%NEW_TOKEN%"=="" exit /b 0
-set "GITHUB_TOKEN=%NEW_TOKEN%"
+if "!NEW_TOKEN!"=="" exit /b 1
+set "GITHUB_TOKEN=!NEW_TOKEN!"
+set "TOKEN_SAVED=0"
+goto :ensure_token_loop
+
+:check_token
+rem Esito in TOKEN_STATUS: ok | norepo | invalid | none | offline ; TOKEN_USER = login GitHub
+set "TOKEN_STATUS=none"
+set "TOKEN_USER=-"
+set "CODES="
+if not defined TOKEN_SAVED set "TOKEN_SAVED=1"
+if not defined GITHUB_TOKEN exit /b 0
+set "TOKEN_STATUS=offline"
+for /f "tokens=1,2" %%a in ('powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
+  "$h=@{'User-Agent'='drop-monitor-setup';'Authorization'='Bearer '+$env:GITHUB_TOKEN};" ^
+  "function code($u){ try { $r=Invoke-WebRequest -Uri $u -Headers $h -UseBasicParsing; return [int]$r.StatusCode } catch { if ($_.Exception.Response) { return [int]$_.Exception.Response.StatusCode } else { return 0 } } };" ^
+  "$u=code('https://api.github.com/user'); $login='-'; if ($u -eq 200) { $login=(Invoke-WebRequest -Uri 'https://api.github.com/user' -Headers $h -UseBasicParsing | ConvertFrom-Json).login };" ^
+  "$rp=code('https://api.github.com/repos/%REPO%'); Write-Output ($u.ToString()+'/'+$rp.ToString()+' '+$login)"') do (
+    set "CODES=%%a"
+    set "TOKEN_USER=%%b"
+)
+if not defined CODES exit /b 0
+for /f "tokens=1,2 delims=/" %%u in ("%CODES%") do (
+    if "%%u"=="0" set "TOKEN_STATUS=offline"
+    if "%%u"=="401" set "TOKEN_STATUS=invalid"
+    if "%%u"=="200" if "%%v"=="200" set "TOKEN_STATUS=ok"
+    if "%%u"=="200" if not "%%v"=="200" set "TOKEN_STATUS=norepo"
+)
+if "%TOKEN_STATUS%"=="ok" echo       token GitHub OK: utente %TOKEN_USER%, accesso a %REPO% confermato
+exit /b 0
+
+:save_token
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 > "%INSTALL_DIR%\setup.local.bat" (
     echo @echo off
-    echo rem Impostazioni locali di setup-windows.bat ^(file personale, preservato dagli aggiornamenti^)
-    echo set "GITHUB_TOKEN=%NEW_TOKEN%"
+    echo rem Impostazioni locali di setup-windows.bat ^(file personale, NON condividere, preservato dagli aggiornamenti^)
+    echo set "GITHUB_TOKEN=%GITHUB_TOKEN%"
 )
+set "TOKEN_SAVED=1"
 echo       token salvato in %INSTALL_DIR%\setup.local.bat
+exit /b 0
+
+:fetch_remote_version
 set "VER_TMP=%SYS_TEMP%\drop-monitor-version-%STAMP%.py"
 call :download "https://api.github.com/repos/%REPO%/contents/drop_monitor/__init__.py?ref=%BRANCH%" "%VER_TMP%" 10 "application/vnd.github.raw" >nul 2>&1
 if exist "%VER_TMP%" (
     for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
     del /q "%VER_TMP%" >nul 2>&1
-    echo       token verificato
-) else (
-    echo       ATTENZIONE: anche con il token GitHub risponde errore: controlla permessi e repository
 )
-exit /b 0
-
-:unzip
-rem :unzip ZIP DEST
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Expand-Archive -Path '%~1' -DestinationPath '%~2' -Force"
-if errorlevel 1 (echo       estrazione fallita: %~1 & exit /b 1)
-exit /b 0
-
-:verify_sha
-rem :verify_sha FILE SHASUMS_TXT NAME_IN_LIST
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$ErrorActionPreference='Stop'; $want=(Get-Content '%~2' | Where-Object { $_ -match '\s%~3$' }) -split '\s+' | Select-Object -First 1;" ^
-  "if (-not $want) { throw 'hash non trovato nella lista' }; $got=(Get-FileHash '%~1' -Algorithm SHA256).Hash.ToLower();" ^
-  "if ($got -ne $want.ToLower()) { throw ('SHA256 diverso: ' + $got) }"
-if errorlevel 1 exit /b 1
 exit /b 0
 
 :find_python
@@ -558,9 +586,8 @@ echo ERRORE: impossibile creare %INSTALL_DIR%
 goto :fail
 :fail_download
 echo ERRORE: download/aggiornamento del codice fallito.
-echo  - il repository e' privato: serve un token GitHub valido ^(Contents: Read^).
-echo    Rilancia il setup e incollalo quando richiesto, oppure scrivilo in
-echo    %INSTALL_DIR%\setup.local.bat come:  set "GITHUB_TOKEN=github_pat_..."
+echo  - il repository e' privato: serve un token con accesso a %REPO% ^(Contents: Read-only^).
+echo    Rilancia il setup: verifica il token e te lo chiede se non funziona.
 echo  - branch inesistente? cambia BRANCH in testa a questo file o DROP_MONITOR_BRANCH
 goto :fail
 :fail_verify
