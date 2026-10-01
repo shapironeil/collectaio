@@ -70,6 +70,10 @@ class OrderRunner:
             for name in task.profiles:
                 if only_profile and name != only_profile:
                     continue
+                if task.max_checkouts and not dry_run and self.store.count_orders(task.name) >= task.max_checkouts:
+                    log.info("task %s reached max_checkouts=%d: skipping profile %s", task.name, task.max_checkouts, name)
+                    results.append(OrderResult(task=task.name, profile=name, status="capped", message=f"limite di {task.max_checkouts} checkout raggiunto"))
+                    continue
                 res = self.run_one(task, name, product_id, product_title, dry_run=dry_run)
                 results.append(res)
                 self._record(res, product_title)

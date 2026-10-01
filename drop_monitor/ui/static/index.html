@@ -6,116 +6,177 @@
 <title>collectaio</title>
 <style>
   :root{
-    --bg:#070A14; --bg2:#0d1226;
-    --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.10); --stroke:rgba(255,255,255,.14); --stroke-2:rgba(255,255,255,.26);
-    --text:#F3F5FA; --muted:rgba(243,245,250,.62); --faint:rgba(243,245,250,.38);
-    --accent:#7C8CFF; --accent-2:#B388FF; --green:#30D158; --amber:#FFB340; --red:#FF5A5F; --blue:#4CB3FF;
-    --radius:26px; --radius-s:16px; --shadow:0 20px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
-  }
-  :root[data-theme="light"]{
-    --bg:#E9EDF7; --bg2:#F6F8FF;
-    --glass:rgba(255,255,255,.55); --glass-2:rgba(255,255,255,.75); --stroke:rgba(20,30,60,.10); --stroke-2:rgba(20,30,60,.20);
-    --text:#0B1020; --muted:rgba(11,16,32,.62); --faint:rgba(11,16,32,.4);
-    --shadow:0 18px 50px rgba(30,40,90,.16), inset 0 1px 0 rgba(255,255,255,.9);
+    --bg:#070907; --bg2:#0c110d; --panel:#111614; --panel2:#171d1a; --line:#222a26; --line2:#2d3732;
+    --text:#e6ebe7; --muted:#97a39c; --faint:#5f6b65;
+    --g:#39ff14; --g2:#00e676; --g3:#0b3d1d; --amber:#ffb340; --red:#ff5a5f; --blue:#4cb3ff;
+    --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Consolas,Menlo,monospace;
+    --sans:"Inter","Segoe UI Variable","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+    --r:14px; --rs:10px; --sidebar:236px;
   }
   *{box-sizing:border-box} html,body{height:100%}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable","Segoe UI",Inter,Roboto,sans-serif;color:var(--text);background:var(--bg);overflow:hidden;-webkit-font-smoothing:antialiased}
-  .blobs{position:fixed;inset:0;z-index:0;overflow:hidden;background:radial-gradient(1200px 800px at 80% -10%,var(--bg2),transparent 60%)}
-  .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55;animation:float 18s ease-in-out infinite}
-  .b1{width:520px;height:520px;left:-120px;top:-120px;background:#5B6CFF}
-  .b2{width:460px;height:460px;right:-100px;top:10%;background:#B04DFF;animation-delay:-6s}
-  .b3{width:420px;height:420px;left:35%;bottom:-180px;background:#19C6D8;animation-delay:-12s}
-  :root[data-theme="light"] .blob{opacity:.35}
-  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-30px) scale(1.08)}}
+  body{margin:0;font-family:var(--sans);background:radial-gradient(900px 500px at 85% -10%,#0f2a1a 0%,transparent 60%),radial-gradient(700px 500px at -10% 110%,#0c1f14 0%,transparent 55%),var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(57,255,20,.025) 0 1px,transparent 1px 3px);mix-blend-mode:screen;z-index:0}
+  .app{position:relative;z-index:1;display:grid;grid-template-columns:var(--sidebar) 1fr;height:100%;transition:grid-template-columns .25s ease}
+  .app.compact{--sidebar:72px}
+  svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
-  .app{position:relative;z-index:1;display:grid;grid-template-columns:240px 1fr;height:100%;gap:18px;padding:18px}
-  .glass{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--radius);backdrop-filter:blur(28px) saturate(170%);-webkit-backdrop-filter:blur(28px) saturate(170%);box-shadow:var(--shadow)}
-  .side{display:flex;flex-direction:column;padding:22px 16px;gap:8px}
-  .brand{display:flex;align-items:center;gap:12px;padding:6px 10px 18px}
-  .logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 8px 24px rgba(124,140,255,.45);display:grid;place-items:center;font-weight:800;color:#fff}
-  .brand b{font-size:17px;letter-spacing:.2px} .brand small{display:block;color:var(--faint);font-size:11px;font-weight:500}
-  .nav{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;color:var(--muted);cursor:pointer;font-weight:600;font-size:14px;transition:.18s;border:1px solid transparent;user-select:none}
-  .nav:hover{background:var(--glass-2);color:var(--text)} .nav.active{background:var(--glass-2);color:var(--text);border-color:var(--stroke)}
-  .nav .ic{width:22px;text-align:center;font-size:16px}
+  /* sidebar */
+  .side{background:linear-gradient(180deg,#0e1310,#0a0e0b);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 10px;gap:4px;overflow:hidden}
+  .brand{display:flex;align-items:center;gap:10px;padding:8px 10px 16px;cursor:pointer}
+  .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#0f3b21,#071a10);border:1px solid #1f6b3a;display:grid;place-items:center;color:var(--g);font-family:var(--mono);font-weight:700;box-shadow:0 0 18px rgba(57,255,20,.18);flex:none}
+  .brand b{font-size:15px;letter-spacing:.3px;white-space:nowrap} .brand small{display:block;color:var(--faint);font-size:11px;font-family:var(--mono);white-space:nowrap}
+  .nav{position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);color:var(--muted);cursor:pointer;font-weight:500;font-size:13.5px;transition:.15s;user-select:none;white-space:nowrap}
+  .nav:hover{background:var(--panel2);color:var(--text)} .nav.active{background:var(--panel2);color:var(--g)}
+  .nav.active::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:3px;background:var(--g);box-shadow:0 0 10px var(--g)}
+  .nav .badge{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--bg);background:var(--g2);border-radius:999px;padding:1px 7px;min-width:20px;text-align:center}
+  .nav .badge.warn{background:var(--amber)} .nav .badge.off{background:var(--line2);color:var(--muted)}
+  .app.compact .nav span.l,.app.compact .brand b,.app.compact .brand small,.app.compact .nav .badge{display:none}
+  .app.compact .nav{justify-content:center;padding:12px 0}
   .side .spacer{flex:1}
-  .health{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);padding:12px 14px;border-radius:14px;background:var(--glass)}
-  .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);box-shadow:0 0 0 0 transparent} .dot.ok{background:var(--green);box-shadow:0 0 14px var(--green)} .dot.bad{background:var(--red);box-shadow:0 0 14px var(--red)}
+  .health{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);padding:10px 12px;border-radius:var(--rs);background:var(--panel);border:1px solid var(--line);font-family:var(--mono);white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint)} .dot.ok{background:var(--g);box-shadow:0 0 10px var(--g)} .dot.bad{background:var(--red);box-shadow:0 0 10px var(--red)}
+  .app.compact .health span.l{display:none}
 
+  /* main */
   .main{display:flex;flex-direction:column;min-width:0;overflow:hidden}
-  .top{display:flex;align-items:center;justify-content:space-between;padding:22px 28px 0}
-  h1{margin:0;font-size:26px;letter-spacing:-.4px;font-weight:700} .sub{color:var(--muted);font-size:13px;margin-top:4px}
-  .content{padding:20px 28px 28px;overflow:auto;flex:1}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px;border-bottom:1px solid var(--line);background:rgba(10,14,11,.7);backdrop-filter:blur(10px)}
+  h1{margin:0;font-size:20px;font-weight:600;letter-spacing:-.2px} .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .content{padding:22px 24px 30px;overflow:auto;flex:1}
   .grid{display:grid;gap:16px} .cols-4{grid-template-columns:repeat(4,1fr)} .cols-2{grid-template-columns:1fr 1fr} .cols-3{grid-template-columns:repeat(3,1fr)}
   @media (max-width:1100px){.cols-4{grid-template-columns:repeat(2,1fr)} .cols-3,.cols-2{grid-template-columns:1fr}}
-  .card{padding:20px 22px} .card h3{margin:0 0 14px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
-  .stat .v{font-size:30px;font-weight:700;letter-spacing:-.6px;margin-top:4px} .stat .l{color:var(--muted);font-size:13px}
-  .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--stroke);background:var(--glass)}
-  .pill.available{color:var(--green);border-color:rgba(48,209,88,.4);background:rgba(48,209,88,.12)}
-  .pill.present_unavailable{color:var(--amber);border-color:rgba(255,179,64,.4);background:rgba(255,179,64,.12)}
-  .pill.absent{color:var(--muted)}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid var(--stroke)} .row:first-of-type{border-top:0}
-  .row .t{font-weight:600;font-size:15px} .row .m{color:var(--muted);font-size:12px;margin-top:3px} .row a{color:var(--blue);text-decoration:none}
-  .btn{appearance:none;border:1px solid var(--stroke-2);background:var(--glass-2);color:var(--text);padding:11px 18px;border-radius:999px;font-weight:600;font-size:14px;cursor:pointer;transition:.18s;backdrop-filter:blur(10px)}
-  .btn:hover{transform:translateY(-1px);background:var(--stroke)} .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
-  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff;box-shadow:0 10px 30px rgba(124,140,255,.35)}
-  .btn.danger{color:var(--red)} .btn.sm{padding:8px 14px;font-size:13px}
-  .field{display:flex;flex-direction:column;gap:6px} .field label{font-size:12px;color:var(--muted);font-weight:600}
-  .field input,.field select{appearance:none;width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font-size:14px;outline:none;transition:.18s;font-family:inherit}
-  .field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(124,140,255,.18)} .field input.bad{border-color:var(--red)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .card h3{margin:0 0 14px;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+  .card h3 svg.i{width:15px;height:15px;color:var(--g2)}
+  .stat .v{font-size:28px;font-weight:600;letter-spacing:-.5px;margin-top:4px;font-family:var(--mono)} .stat .l{color:var(--muted);font-size:12.5px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:600;border:1px solid var(--line2);background:var(--panel2);color:var(--muted);font-family:var(--mono);white-space:nowrap}
+  .pill.available,.pill.ok{color:var(--g);border-color:rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
+  .pill.present_unavailable,.pill.warn{color:var(--amber);border-color:rgba(255,179,64,.35);background:rgba(255,179,64,.08)}
+  .pill.absent,.pill.bad{color:var(--red);border-color:rgba(255,90,95,.35);background:rgba(255,90,95,.08)}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid var(--line)} .row:first-of-type{border-top:0}
+  .row .t{font-weight:600;font-size:14px} .row .m{color:var(--muted);font-size:12px;margin-top:3px} .row a,a{color:var(--blue);text-decoration:none}
+  .btn{appearance:none;border:1px solid var(--line2);background:var(--panel2);color:var(--text);padding:9px 14px;border-radius:var(--rs);font-weight:600;font-size:13px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px;font-family:var(--sans)}
+  .btn:hover{border-color:var(--g2);color:var(--g)} .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.primary{background:var(--g2);border-color:var(--g2);color:#04110a} .btn.primary:hover{background:var(--g);color:#04110a}
+  .btn.danger{color:var(--red)} .btn.danger:hover{border-color:var(--red)} .btn.sm{padding:7px 11px;font-size:12.5px}
+  .field{display:flex;flex-direction:column;gap:5px} .field label{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.2px}
+  .field input,.field select,.field textarea{appearance:none;width:100%;padding:10px 12px;border-radius:var(--rs);border:1px solid var(--line2);background:#0b0f0d;color:var(--text);font-size:13.5px;outline:none;transition:.15s;font-family:var(--sans)}
+  .field textarea{font-family:var(--mono);font-size:12px} .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--g2);box-shadow:0 0 0 3px rgba(0,230,118,.15)}
   .field select option{color:#000}
-  .form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px} .form .full{grid-column:1/-1}
-  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px} .chip{padding:8px 14px;border-radius:999px;border:1px solid var(--stroke);background:var(--glass);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)} .chip.active{color:var(--text);border-color:var(--accent);background:rgba(124,140,255,.16)}
-  .switch{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer} .switch input{width:44px;height:26px;appearance:none;background:var(--stroke);border-radius:999px;position:relative;transition:.2s;cursor:pointer;margin:0} .switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 6px rgba(0,0,0,.3)} .switch input:checked{background:var(--green)} .switch input:checked::after{left:21px}
-  .captcha{display:flex;align-items:center;gap:16px;padding:14px;border-radius:18px;background:var(--glass);border:1px dashed var(--stroke-2)} .captcha img{border-radius:12px;background:#fff;min-width:200px;height:70px;image-rendering:crisp-edges}
-  .note{font-size:12px;color:var(--muted);line-height:1.5} .ok{color:var(--green)} .err{color:var(--red)} .warn{color:var(--amber)}
-  .kv{display:grid;grid-template-columns:220px 1fr;gap:6px 14px;font-size:13px} .kv div:nth-child(odd){color:var(--muted)} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--glass);padding:2px 6px;border-radius:6px;word-break:break-all}
-  .toast{position:fixed;right:28px;bottom:28px;z-index:9;padding:14px 18px;border-radius:16px;font-weight:600;transform:translateY(20px);opacity:0;transition:.25s;pointer-events:none} .toast.show{transform:none;opacity:1}
-  .timeline .row{padding:10px 0} .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px} .step{padding:12px 14px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke);font-size:12px;color:var(--muted)} .step b{display:block;color:var(--text);font-size:13px;margin-bottom:2px} .step.done{border-color:rgba(48,209,88,.5)} .step.cur{border-color:var(--accent)}
+  .form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px} .form .full{grid-column:1/-1}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px} .chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--panel2);cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted);font-family:var(--mono)} .chip.active{color:var(--g);border-color:var(--g2);background:rgba(0,230,118,.1)}
+  .switch{display:flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer} .switch input{width:40px;height:22px;appearance:none;background:var(--line2);border-radius:999px;position:relative;transition:.2s;cursor:pointer;margin:0;flex:none} .switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#dfe6e1;transition:.2s} .switch input:checked{background:var(--g2)} .switch input:checked::after{left:21px;background:#04110a}
+  .note{font-size:12.5px;color:var(--muted);line-height:1.55} .ok{color:var(--g)} .err{color:var(--red)} .warn{color:var(--amber)}
+  .kv{display:grid;grid-template-columns:220px 1fr;gap:6px 14px;font-size:13px} .kv div:nth-child(odd){color:var(--muted)}
+  code{font-family:var(--mono);font-size:12px;background:#0b0f0d;border:1px solid var(--line);padding:1px 6px;border-radius:6px;word-break:break-all;color:#bfe8c9}
+  table.tbl{width:100%;border-collapse:collapse;font-size:12.5px} .tbl th{text-align:left;color:var(--muted);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line2);font-size:11.5px;text-transform:uppercase;letter-spacing:.6px} .tbl td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top} .tbl td code{white-space:nowrap}
+  .toast{position:fixed;right:24px;bottom:24px;z-index:9;padding:12px 16px;border-radius:var(--rs);font-weight:600;font-size:13px;background:var(--panel2);border:1px solid var(--line2);transform:translateY(16px);opacity:0;transition:.25s;pointer-events:none;max-width:460px} .toast.show{transform:none;opacity:1} .toast.ok{border-color:var(--g2);color:var(--g)} .toast.err{border-color:var(--red);color:var(--red)} .toast.warn{border-color:var(--amber);color:var(--amber)}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px} .step{padding:11px 13px;border-radius:var(--rs);background:var(--panel);border:1px solid var(--line);font-size:12px;color:var(--muted)} .step b{display:block;color:var(--text);font-size:13px;margin-bottom:2px;font-family:var(--mono)} .step.done{border-color:rgba(57,255,20,.5)} .step.cur{border-color:var(--g2);box-shadow:0 0 0 3px rgba(0,230,118,.12)}
+  .captcha{display:flex;align-items:center;gap:14px;padding:12px;border-radius:var(--rs);background:#0b0f0d;border:1px dashed var(--line2)} .captcha img{border-radius:8px;background:#fff;min-width:200px;height:70px}
   .hidden{display:none!important}
+  .learn{display:grid;grid-template-columns:repeat(3,1fr);gap:14px} @media (max-width:1100px){.learn{grid-template-columns:1fr}}
+  .learn .card p{margin:6px 0;font-size:13px;line-height:1.55;color:#c9d2cc} .learn .card b{color:var(--text)}
+
+  /* 3D card */
+  .scene{perspective:1200px;display:flex;justify-content:center;padding:6px 0 14px}
+  .cc{position:relative;width:380px;height:238px;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+  .cc .face{position:absolute;inset:0;border-radius:18px;backface-visibility:hidden;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.1)}
+  .cc .front{background:linear-gradient(135deg,#0e2416 0%,#101915 45%,#1b2320 100%);padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;color:#e8f3ea}
+  .cc .front::before{content:"";position:absolute;inset:0;background:radial-gradient(400px 200px at 110% -20%,rgba(57,255,20,.25),transparent 60%),repeating-linear-gradient(115deg,rgba(255,255,255,.025) 0 2px,transparent 2px 9px)}
+  .cc .chip{width:46px;height:34px;border-radius:7px;background:linear-gradient(135deg,#d9c27a,#9f8540);box-shadow:inset 0 0 0 1px rgba(0,0,0,.3)} .cc .chip::after{content:"";position:absolute;width:46px;height:34px;border-radius:7px;background:repeating-linear-gradient(0deg,transparent 0 9px,rgba(0,0,0,.25) 9px 10px),repeating-linear-gradient(90deg,transparent 0 14px,rgba(0,0,0,.25) 14px 15px)}
+  .cc .num{font-family:var(--mono);font-size:24px;letter-spacing:2.5px;display:flex;gap:14px;position:relative;z-index:1;margin-top:6px} .cc .num span{min-width:68px} .cc .num span.on{color:var(--g);text-shadow:0 0 10px rgba(57,255,20,.6)}
+  .cc .bottom{display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:1} .cc .lab{font-size:9px;letter-spacing:1.5px;color:#8fa697;text-transform:uppercase} .cc .val{font-family:var(--mono);font-size:14px;letter-spacing:1.2px;margin-top:2px;text-transform:uppercase} .cc .val.on{color:var(--g)}
+  .cc .brand-logo{position:absolute;top:20px;right:24px;font-family:var(--mono);font-weight:700;letter-spacing:2px;font-size:13px;color:#cfe3d4;text-transform:uppercase;z-index:1}
+  .cc .back{background:linear-gradient(135deg,#121a15,#0d120f);transform:rotateY(180deg);color:#e8f3ea}
+  .cc .strip{height:46px;background:#060806;margin-top:24px} .cc .sig{margin:22px 24px 0;height:40px;background:repeating-linear-gradient(0deg,#e9e9e9 0 3px,#d6d6d6 3px 6px);border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-family:var(--mono);color:#111;font-size:15px;letter-spacing:3px}
+  .cc .sig span.on{color:#0a7a2f} .cc .back .lab{position:absolute;right:24px;bottom:58px}
+  .cc.flip{transform:rotateY(180deg)}
+  .cursor::after{content:"▌";color:var(--g);animation:blink 1s steps(2) infinite;margin-left:2px} @keyframes blink{to{opacity:0}}
+  .qt{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end} @media (max-width:1100px){.qt{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="blobs"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
-<div class="app">
-  <aside class="side glass">
-    <div class="brand"><div class="logo">C</div><div><b>collectaio</b><small id="ver">drop-monitor</small></div></div>
-    <div class="nav active" data-view="dashboard"><span class="ic">◎</span>Dashboard</div>
-    <div class="nav" data-view="tasks"><span class="ic">▣</span>Tasks</div>
-    <div class="nav" data-view="profiles"><span class="ic">◉</span>Profili</div>
-    <div class="nav" data-view="account"><span class="ic">✦</span>Account</div>
-    <div class="nav" data-view="settings"><span class="ic">⚙</span>Impostazioni</div>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-dash" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="i-task" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.9 12.1L21 2l-3 3 2 2-2 2-2-2-3.1 3.1"/></symbol>
+  <symbol id="i-module" viewBox="0 0 24 24"><path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 17l9 5 9-5"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+</defs></svg>
+
+<div class="app" id="app">
+  <aside class="side">
+    <div class="brand" id="brand-toggle" title="Riduci / espandi la barra"><div class="logo">C</div><div><b>COLLECTAIO</b><small id="ver">v—</small></div></div>
+    <div class="nav active" data-view="dashboard"><svg class="i"><use href="#i-dash"/></svg><span class="l">Dashboard</span><span class="badge off" id="b-dash">0</span></div>
+    <div class="nav" data-view="tasks"><svg class="i"><use href="#i-task"/></svg><span class="l">Tasks</span><span class="badge off" id="b-tasks">0</span></div>
+    <div class="nav" data-view="profiles"><svg class="i"><use href="#i-user"/></svg><span class="l">Profili</span><span class="badge off" id="b-prof">0</span></div>
+    <div class="nav" data-view="account"><svg class="i"><use href="#i-key"/></svg><span class="l">Account</span></div>
+    <div class="nav" data-view="modules"><svg class="i"><use href="#i-module"/></svg><span class="l">Moduli</span><span class="badge off" id="b-mod">0</span></div>
+    <div class="nav" data-view="learn"><svg class="i"><use href="#i-book"/></svg><span class="l">Imparo</span></div>
+    <div class="nav" data-view="settings"><svg class="i"><use href="#i-gear"/></svg><span class="l">Impostazioni</span><span class="badge warn hidden" id="b-upd">1</span></div>
     <div class="spacer"></div>
-    <div class="nav" id="theme"><span class="ic">◐</span>Tema</div>
-    <div class="health"><span class="dot" id="hdot"></span><span id="htext">controllo…</span></div>
+    <div class="health"><span class="dot" id="hdot"></span><span class="l" id="htext">controllo…</span></div>
   </aside>
 
-  <main class="main glass">
-    <div class="top"><div><h1 id="title">Dashboard</h1><div class="sub" id="subtitle">monitor drop e restock</div></div><div style="display:flex;gap:8px;align-items:center"><span class="pill" id="mon-pill">monitor: –</span><button class="btn sm primary" id="mon-start">▶ Avvia</button><button class="btn sm" id="mon-dry">🧪 Dry-run</button><button class="btn sm danger" id="mon-stop">■ Stop</button><button class="btn sm" id="refresh">Aggiorna</button></div></div>
+  <main class="main">
+    <div class="top">
+      <div><h1 id="title">Dashboard</h1><div class="sub" id="subtitle">monitor drop e restock</div></div>
+      <div class="controls">
+        <span class="pill" id="mon-pill">monitor: –</span>
+        <button class="btn sm primary" id="mon-start"><svg class="i"><use href="#i-play"/></svg>Avvia</button>
+        <button class="btn sm" id="mon-dry"><svg class="i"><use href="#i-flask"/></svg>Dry-run</button>
+        <button class="btn sm danger" id="mon-stop"><svg class="i"><use href="#i-stop"/></svg>Stop</button>
+        <input type="datetime-local" id="mon-at" class="btn sm" style="font-family:var(--mono);padding:6px 10px" title="Programma l'avvio (orario del drop)">
+        <button class="btn sm" id="mon-sched" title="Avvia il monitor all'orario scelto"><svg class="i"><use href="#i-clock"/></svg></button>
+        <button class="btn sm" id="refresh" title="Aggiorna"><svg class="i"><use href="#i-refresh"/></svg></button>
+      </div>
+    </div>
     <div class="content">
 
       <!-- DASHBOARD -->
       <section id="view-dashboard">
         <div class="grid cols-4" style="margin-bottom:16px">
-          <div class="card glass stat"><div class="l">Tasks attivi</div><div class="v" id="s-tasks">–</div></div>
-          <div class="card glass stat"><div class="l">Disponibili ora</div><div class="v ok" id="s-avail">–</div></div>
-          <div class="card glass stat"><div class="l">Catalogo osservato</div><div class="v" id="s-seen">–</div></div>
-          <div class="card glass stat"><div class="l">Ultimo check</div><div class="v" id="s-last" style="font-size:20px">–</div></div>
+          <div class="card stat"><div class="l">Tasks attivi</div><div class="v" id="s-tasks">–</div></div>
+          <div class="card stat"><div class="l">Disponibili ora</div><div class="v ok" id="s-avail">–</div></div>
+          <div class="card stat"><div class="l">Catalogo osservato</div><div class="v" id="s-seen">–</div></div>
+          <div class="card stat"><div class="l">Ultimo check</div><div class="v" id="s-last" style="font-size:18px">–</div></div>
         </div>
         <div class="grid cols-2">
-          <div class="card glass"><h3>Prodotti osservati</h3><div id="tracked"></div></div>
-          <div class="card glass timeline"><h3>Eventi recenti</h3><div id="events"></div></div>
+          <div class="card"><h3><svg class="i"><use href="#i-list"/></svg>Prodotti osservati</h3><div id="tracked"></div></div>
+          <div class="card"><h3><svg class="i"><use href="#i-bell"/></svg>Eventi recenti</h3><div id="events"></div></div>
         </div>
       </section>
 
       <!-- TASKS -->
       <section id="view-tasks" class="hidden">
+        <div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-bolt"/></svg>Quick task — incolla l'URL del prodotto</h3>
+          <div class="qt"><div class="field"><label>URL pagina prodotto</label><input id="qt-url" placeholder="https://www.gemcardinfinitycollection.it/it/..."></div><div class="field"><label>Modalità</label><select id="qt-mode"><option value="monitor">monitor</option><option value="auto_checkout">auto_checkout</option></select></div><div class="field"><label>Profili (virgole)</label><input id="qt-prof" value="default"></div><button class="btn primary" id="qt-go"><svg class="i"><use href="#i-plus"/></svg>Crea</button></div>
+          <div class="note" id="qt-res" style="margin-top:10px">Il prodotto viene letto dal sito (titolo, prezzo, disponibilità) e aggiunto a prodotti e task.</div></div>
         <div class="grid cols-2">
           <div>
-            <div class="card glass" style="margin-bottom:16px"><h3>Prodotti osservati</h3><div id="prod-list"></div><div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn sm" id="prod-add">+ Prodotto</button></div></div>
-            <div class="card glass"><h3>Tasks di acquisto</h3><div id="task-list"></div><div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn sm" id="task-add">+ Task</button><button class="btn primary sm" id="tp-save">Salva prodotti e task</button></div><p class="note" style="margin-top:10px">Un task = prodotto × quantità × profili. In <b>auto_checkout</b> parte da solo quando il prodotto diventa disponibile. Dopo il salvataggio riavvia il monitor.</p></div>
+            <div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-list"/></svg>Prodotti osservati</h3><div id="prod-list"></div><div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn sm" id="prod-add"><svg class="i"><use href="#i-plus"/></svg>Prodotto</button></div></div>
+            <div class="card"><h3><svg class="i"><use href="#i-cart"/></svg>Tasks di acquisto</h3><div id="task-list"></div><div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><button class="btn sm" id="task-add"><svg class="i"><use href="#i-plus"/></svg>Task</button><button class="btn primary sm" id="tp-save"><svg class="i"><use href="#i-save"/></svg>Salva prodotti e task</button></div><p class="note" style="margin-top:10px">Un task = prodotto × quantità × profili. In <b>auto_checkout</b> parte da solo quando il prodotto diventa disponibile. Dopo il salvataggio riavvia il monitor.</p></div>
           </div>
-          <div><div class="card glass" style="margin-bottom:16px"><h3>Riepilogo</h3><div id="tasks"></div></div><div class="card glass"><h3>Ordini</h3><div id="orders"></div></div></div>
-          <div class="card glass"><h3>Sorgenti e polling</h3><div id="sources"></div><div class="kv" id="polling" style="margin-top:12px"></div></div>
+          <div><div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-task"/></svg>Riepilogo</h3><div id="tasks"></div></div><div class="card"><h3><svg class="i"><use href="#i-cart"/></svg>Ordini</h3><div id="orders"></div></div></div>
         </div>
       </section>
 
@@ -123,12 +184,12 @@
       <section id="view-profiles" class="hidden">
         <div class="chips" id="profile-chips"></div>
         <div class="grid cols-2">
-          <div class="card glass">
-            <h3>Account e spedizione</h3>
+          <div class="card">
+            <h3><svg class="i"><use href="#i-user"/></svg>Account e spedizione</h3>
             <div class="form">
               <div class="field"><label>Nome profilo</label><input id="p-name" placeholder="default"></div>
               <div class="field"><label>E-mail account</label><input id="p-email" type="email" autocomplete="off"></div>
-              <div class="field"><label>Password account (salvata in .env)</label><input id="p-password" type="password" placeholder="•••••• (lascia vuoto per non cambiarla)" autocomplete="new-password"></div>
+              <div class="field"><label>Password account (salvata in .env)</label><input id="p-password" type="password" placeholder="lascia vuoto per non cambiarla" autocomplete="new-password"></div>
               <div class="field"><label>Telefono</label><input id="p-phone"></div>
               <div class="field"><label>Nome</label><input id="p-first"></div>
               <div class="field"><label>Cognome</label><input id="p-last"></div>
@@ -139,20 +200,32 @@
               <div class="field"><label>Nazione</label><select id="p-country"><option value="46">Italy</option></select></div>
               <div class="field"><label>Provincia</label><select id="p-province"><option value="0">carica dal sito…</option></select></div>
               <div class="field full"><label>Ragione sociale (facoltativo)</label><input id="p-company"></div>
+              <div class="field"><label>Codice fiscale</label><input id="p-cf"></div>
+              <div class="field"><label>Partita IVA</label><input id="p-vat"></div>
+              <div class="field"><label>Codice SDI</label><input id="p-sdi"></div>
+              <div class="field"><label>PEC</label><input id="p-pec"></div>
             </div>
           </div>
           <div>
-            <div class="card glass" style="margin-bottom:16px">
-              <h3>Fatturazione (facoltativo)</h3>
+            <div class="card" style="margin-bottom:16px">
+              <h3><svg class="i"><use href="#i-card"/></svg>Billing — carta di pagamento</h3>
+              <div class="scene"><div class="cc" id="cc">
+                <div class="face front"><div class="brand-logo" id="cc-brand">CARD</div><div class="chip"></div>
+                  <div class="num" id="cc-num"><span>••••</span><span>••••</span><span>••••</span><span>••••</span></div>
+                  <div class="bottom"><div><div class="lab">Titolare</div><div class="val" id="cc-holder">NOME COGNOME</div></div><div><div class="lab">Scadenza</div><div class="val" id="cc-exp">MM/AA</div></div></div>
+                </div>
+                <div class="face back"><div class="strip"></div><div class="sig"><span id="cc-cvv">•••</span></div><div class="lab">CVV</div></div>
+              </div></div>
               <div class="form">
-                <div class="field"><label>Codice fiscale</label><input id="p-cf"></div>
-                <div class="field"><label>Partita IVA</label><input id="p-vat"></div>
-                <div class="field"><label>Codice SDI</label><input id="p-sdi"></div>
-                <div class="field"><label>PEC</label><input id="p-pec"></div>
+                <div class="field full"><label>Numero carta</label><input id="pc-number" inputmode="numeric" maxlength="23" placeholder="•••• •••• •••• ••••" autocomplete="off"></div>
+                <div class="field"><label>Titolare</label><input id="pc-holder" placeholder="NOME COGNOME" autocomplete="off"></div>
+                <div class="field"><label>Scadenza (MM/AA)</label><input id="pc-exp" maxlength="5" placeholder="MM/AA" autocomplete="off"></div>
+                <div class="field"><label>CVV (non viene salvato)</label><input id="pc-cvv" type="password" maxlength="4" inputmode="numeric" autocomplete="off"></div>
+                <div class="full note" id="pc-info"><svg class="i" style="vertical-align:-4px;width:14px;height:14px;color:var(--g2)"><use href="#i-shield"/></svg> Numero e scadenza sono cifrati su questo PC (chiave in <code>.env</code>); il CVV non viene mai salvato. Il checkout nel sito con carta non è attivo: questi dati servono alla fase 2 e ai metodi che li richiedono.</div>
               </div>
             </div>
-            <div class="card glass">
-              <h3>Preferenze ordine (fase 2)</h3>
+            <div class="card">
+              <h3><svg class="i"><use href="#i-gear"/></svg>Preferenze ordine</h3>
               <div class="form">
                 <div class="field"><label>Quantità max per ordine</label><input id="p-qty" type="number" min="1"></div>
                 <div class="field"><label>Spesa massima (€)</label><input id="p-max" type="number" min="0"></div>
@@ -161,51 +234,70 @@
                 <label class="switch full"><input type="checkbox" id="p-confirm"> Chiedi conferma su Telegram prima dell'ordine</label>
                 <label class="switch full"><input type="checkbox" id="p-news"> Newsletter del negozio</label>
               </div>
-              <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
-                <button class="btn primary" id="p-save">Salva profilo</button>
-                <button class="btn" id="p-new">Nuovo profilo</button>
-                <button class="btn danger" id="p-delete">Elimina</button>
-              </div>
+              <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"><button class="btn primary" id="p-save"><svg class="i"><use href="#i-save"/></svg>Salva profilo</button><button class="btn" id="p-new"><svg class="i"><use href="#i-plus"/></svg>Nuovo</button><button class="btn danger" id="p-delete"><svg class="i"><use href="#i-x"/></svg>Elimina</button></div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ACCOUNT / REGISTRATION HARVESTER -->
+      <!-- ACCOUNT -->
       <section id="view-account" class="hidden">
         <div class="steps">
-          <div class="step cur" id="st1"><b>1 · Profilo</b>scegli chi registrare</div>
-          <div class="step" id="st2"><b>2 · Modulo</b>scarica il form dal sito</div>
-          <div class="step" id="st3"><b>3 · Captcha</b>leggi l'immagine e rispondi</div>
-          <div class="step" id="st4"><b>4 · Registra</b>invio e verifica esito</div>
+          <div class="step cur" id="st1"><b>01 · Profilo</b>scegli chi registrare</div>
+          <div class="step" id="st2"><b>02 · Modulo</b>scarica il form dal sito</div>
+          <div class="step" id="st3"><b>03 · Captcha</b>leggi l'immagine e rispondi</div>
+          <div class="step" id="st4"><b>04 · Registra</b>invio e verifica esito</div>
         </div>
         <div class="grid cols-2">
-          <div class="card glass">
-            <h3>Registrazione sul negozio</h3>
+          <div class="card">
+            <h3><svg class="i"><use href="#i-key"/></svg>Registrazione sul negozio</h3>
             <div class="form">
               <div class="field"><label>Profilo</label><select id="r-profile"></select></div>
               <div class="field"><label>Password account (min 6)</label><input id="r-password" type="password" autocomplete="new-password" placeholder="dal profilo, se salvata"></div>
-              <div class="field full"><button class="btn" id="r-load">Carica modulo dal sito</button></div>
+              <div class="field full"><button class="btn" id="r-load"><svg class="i"><use href="#i-download"/></svg>Carica modulo dal sito</button></div>
               <div class="full"><div id="r-fields" class="note">Il modulo non è ancora stato caricato.</div></div>
-              <div class="full captcha hidden" id="r-captcha-box">
-                <img id="r-captcha" alt="captcha">
-                <div style="flex:1" class="field"><label>Risposta captcha</label><input id="r-captcha-answer" autocomplete="off" autocorrect="off" spellcheck="false"></div>
-                <button class="btn sm" id="r-captcha-refresh">↻</button>
-              </div>
+              <div class="full captcha hidden" id="r-captcha-box"><img id="r-captcha" alt="captcha"><div style="flex:1" class="field"><label>Risposta captcha (es. 74-29=? → 45)</label><input id="r-captcha-answer" autocomplete="off" spellcheck="false"></div><button class="btn sm" id="r-captcha-refresh" title="Nuova immagine"><svg class="i"><use href="#i-refresh"/></svg></button></div>
               <label class="switch full"><input type="checkbox" id="r-news"> Ricevi la newsletter</label>
               <label class="switch full"><input type="checkbox" id="r-consent"> Accetto privacy, condizioni di vendita e informativa di registrazione del negozio</label>
               <label class="switch full"><input type="checkbox" id="r-savepw" checked> Salva la password nel profilo (.env) se la registrazione va a buon fine</label>
-              <div class="full" style="display:flex;gap:10px;flex-wrap:wrap">
-                <button class="btn" id="r-preview" disabled>Anteprima dati inviati</button>
-                <button class="btn primary" id="r-submit" disabled>Registra account</button>
-                <a class="btn" id="r-open" target="_blank" rel="noopener">Apri sul sito</a>
-              </div>
+              <div class="full" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="r-preview" disabled>Anteprima dati</button><button class="btn primary" id="r-submit" disabled>Registra account</button><a class="btn" id="r-open" target="_blank" rel="noopener">Apri sul sito</a></div>
             </div>
           </div>
+          <div><div class="card" style="margin-bottom:16px"><h3>Esito</h3><div id="r-result" class="note">Nessuna registrazione inviata.</div></div><div class="card"><h3>Dati che il sito riceverà</h3><div id="r-payload" class="kv"><div class="note" style="grid-column:1/-1">Carica il modulo e premi “Anteprima”.</div></div></div></div>
+        </div>
+      </section>
+
+      <!-- MODULES -->
+      <section id="view-modules" class="hidden">
+        <div class="grid cols-2">
+          <div id="mod-list"></div>
           <div>
-            <div class="card glass" style="margin-bottom:16px"><h3>Esito</h3><div id="r-result" class="note">Nessuna registrazione inviata.</div></div>
-            <div class="card glass"><h3>Dati che il sito riceverà</h3><div id="r-payload" class="kv"><div class="note" style="grid-column:1/-1">Carica il modulo e premi “Anteprima”.</div></div></div>
+            <div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-user"/></svg>Generatore account — solo teoria, per ora</h3>
+              <div class="note">
+                <p><b>Obiettivo</b>: creare N account sul negozio a partire da N profili, uno per ordine, usando il modulo <i>auth</i> del sito (campi, captcha, esiti già studiati).</p>
+                <p><b>Flusso previsto</b>: 1) scegli quanti account e da quali profili; 2) per ciascuno il modulo prepara il form con i dati del profilo; 3) la persona risolve il captcha nella finestra (mai in automatico); 4) esito letto dal sito e salvato nel profilo; 5) se il sito chiede conferma e-mail, l'account resta "in attesa" finché il link non viene aperto.</p>
+                <p><b>Da decidere</b>: quale e-mail usare per ogni account (alias <code>+tag</code> dello stesso provider, catch-all di un dominio proprio, caselle separate), e come leggere le e-mail di conferma. Niente viene creato finché non lo decidiamo.</p>
+                <p><b>Limiti etici e pratici</b>: un account per persona reale e indirizzo reale; i negozi annullano ordini duplicati evidenti. Il generatore serve a gestire più ordini legittimi (es. famiglia), non a bypassare i limiti del negozio.</p>
+              </div>
+              <div class="form" style="margin-top:12px"><div class="field"><label>Quanti account (teoria)</label><input type="number" value="2" disabled></div><div class="field"><label>Strategia e-mail</label><select disabled><option>da decidere</option></select></div><div class="full"><button class="btn" disabled>Genera (non attivo)</button></div></div>
+            </div>
+            <div class="card"><h3><svg class="i"><use href="#i-module"/></svg>Come nasce un modulo</h3><div class="note"><p>Ogni sito ha una cartella in <code>drop_monitor/sites/</code> con due procedure salvate: <b>auth</b> (login e registrazione) e <b>checkout</b> (carrello e ordine), più i segnali del monitor. Prima si studia il sito (richieste reali, pagine salvate come fixture), poi si scrive il codice e i test, infine la procedura viene documentata qui, con la data della verifica. Un sito nuovo = un modulo nuovo, senza toccare il resto.</p></div></div>
           </div>
+        </div>
+      </section>
+
+      <!-- LEARN -->
+      <section id="view-learn" class="hidden">
+        <div class="learn">
+          <div class="card"><h3><svg class="i"><use href="#i-flask"/></svg>Dry-run e Run</h3><p><b>Dry-run</b> = "prova a secco": il programma fa tutto come se fosse vero ma si ferma prima dell'azione irreversibile. Nel monitor non invia notifiche (le scrive solo nel log); nell'ordine arriva fino al riepilogo con il totale e <b>non</b> preme "conferma".</p><p><b>Run</b> = esecuzione reale: notifiche inviate, ordini confermati (dopo limite di spesa e conferma Telegram).</p><p>Regola d'oro: ogni task nuovo si prova prima in dry-run.</p></div>
+          <div class="card"><h3><svg class="i"><use href="#i-dash"/></svg>Monitor</h3><p>Fa <b>una richiesta per ciclo</b>, con intervallo casuale fra minimo e massimo. Alterna le pagine prodotto (segnale certo) alle liste (scoperta di prodotti nuovi): l'<b>hot ratio</b> dice quante pagine prodotto per ogni lista.</p><p>Su errori 429/5xx aspetta con <b>backoff</b> esponenziale: raddoppia l'attesa a ogni errore fino al massimo, poi riparte.</p><p>Stati: <b>non presente</b>, <b>presente non acquistabile</b>, <b>disponibile</b>. Notifica solo quando lo stato cambia.</p></div>
+          <div class="card"><h3><svg class="i"><use href="#i-task"/></svg>Task e profili</h3><p>Un <b>profilo</b> è una persona: account del negozio, indirizzo, fatturazione, carta, preferenze. Un <b>task</b> è "compra questo prodotto, in questa quantità, con questi profili": in modalità <b>monitor</b> avvisa soltanto, in <b>auto_checkout</b> parte da solo quando il prodotto diventa disponibile e fa un ordine per profilo.</p><p><b>Spesa massima</b> e <b>max checkouts</b> sono i freni: oltre, non conferma.</p></div>
+          <div class="card"><h3><svg class="i"><use href="#i-cart"/></svg>Flusso dell'ordine</h3><p>login → svuota carrello → aggiungi → vai al checkout → indirizzo → spedizione → pagamento → riepilogo letto dal sito → controllo limiti → conferma umana (bottoni Telegram) → invio → link di pagamento se esterno (PayPal).</p><p>Ogni passo è registrato nello storico ordini con il motivo di eventuali stop.</p></div>
+          <div class="card"><h3><svg class="i"><use href="#i-key"/></svg>Captcha e account</h3><p>Il negozio chiede un captcha solo alla registrazione: una domanda aritmetica su immagine. La finestra la mostra, tu scrivi il risultato, il resto lo compila lei. Il login non ha captcha e la fase 2 lo usa in automatico con i cookie salvati per profilo.</p><p>Non risolviamo mai captcha in automatico: è la differenza fra uno strumento e un abuso.</p></div>
+          <div class="card"><h3><svg class="i"><use href="#i-globe"/></svg>Proxy</h3><p><b>off</b>: nessun proxy. <b>rotate</b>: il monitor alterna i proxy a ogni richiesta (stessa frequenza, IP diversi). <b>sticky</b>: negli ordini ogni profilo usa sempre lo stesso proxy, così ogni account ha il suo IP stabile, come fa un bot AIO.</p><p>Formato: <code>http://utente:password@host:porta</code> o <code>socks5://…</code>.</p></div>
+          <div class="card"><h3><svg class="i"><use href="#i-bell"/></svg>Notifiche</h3><p><b>Telegram</b>: notifiche, comando <code>/status</code>, <code>/orders</code>, e i bottoni di conferma ordine. <b>Discord</b>: webhook con embed (titolo, prezzo, link); solo notifiche.</p><p>Token e webhook stanno in <code>.env</code>, mai nel file di configurazione.</p></div>
+          <div class="card"><h3><svg class="i"><use href="#i-module"/></svg>Moduli</h3><p>Un modulo per sito, con le procedure studiate e salvate: cosa chiamare, quali campi, quali segnali, cosa non si sa ancora. Il monitor, la registrazione e il checkout usano il modulo del sito dell'URL, così aggiungere un negozio non tocca il resto.</p></div>
+          <div class="card"><h3><svg class="i"><use href="#i-shield"/></svg>Dati personali</h3><p>Tutto resta nella cartella di installazione: <code>personal/</code> (profili, cookie), <code>.env</code> (password, token, chiave di cifratura), <code>data/</code> (database, log). Gli aggiornamenti non li toccano e ne fanno un backup.</p><p>Il numero di carta è cifrato; il CVV non viene mai scritto su disco.</p></div>
         </div>
       </section>
 
@@ -213,108 +305,100 @@
       <section id="view-settings" class="hidden">
         <div class="grid cols-2">
           <div>
-            <div class="card glass" style="margin-bottom:16px">
-              <h3>Monitor</h3>
+            <div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-download"/></svg>Aggiornamenti</h3>
+              <div class="kv" id="upd-info"><div>Versione</div><div id="upd-ver">–</div><div>Commit installato</div><div id="upd-inst">–</div><div>Ultimo sul branch</div><div id="upd-latest">–</div></div>
+              <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn" id="upd-check"><svg class="i"><use href="#i-refresh"/></svg>Controlla aggiornamenti</button><button class="btn primary hidden" id="upd-apply"><svg class="i"><use href="#i-download"/></svg>Installa e riavvia</button><button class="btn" id="app-restart"><svg class="i"><use href="#i-refresh"/></svg>Riavvia app</button></div>
+              <p class="note" style="margin-top:10px" id="upd-note">Scarica il codice dal branch, sostituisce solo i file del programma (profili, dati e impostazioni restano), aggiorna le dipendenze e riavvia. Non serve più il setup.</p></div>
+            <div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-dash"/></svg>Monitor</h3>
               <div class="form">
                 <div class="field"><label>Intervallo minimo (s)</label><input id="c-min" type="number" min="5"></div>
                 <div class="field"><label>Intervallo massimo (s)</label><input id="c-max" type="number" min="5"></div>
-                <div class="field"><label>Pagine prodotto per ogni lista (hot ratio)</label><input id="c-hot" type="number" min="0"></div>
+                <div class="field"><label>Hot ratio (pagine prodotto per lista)</label><input id="c-hot" type="number" min="0"></div>
                 <div class="field"><label>Timeout richieste (s)</label><input id="c-timeout" type="number" min="5"></div>
                 <div class="field"><label>Backoff base (s)</label><input id="c-bbase" type="number" min="5"></div>
                 <div class="field"><label>Backoff massimo (s)</label><input id="c-bmax" type="number" min="10"></div>
                 <div class="field full"><label>User-Agent</label><input id="c-ua"></div>
                 <label class="switch full"><input type="checkbox" id="c-robots"> Rispetta robots.txt</label>
                 <label class="switch full"><input type="checkbox" id="c-track"> Controlla direttamente le pagine prodotto (consigliato)</label>
-                <div class="field full"><label>Sorgenti (una per riga: <code>tipo URL</code>, tipo = category/search/product/rss/shopify/auto)</label><textarea id="c-sources" rows="4" style="width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea></div>
-              </div>
-            </div>
-            <div class="card glass">
-              <h3>Proxy</h3>
-              <div class="form">
-                <div class="field"><label>Modalità</label><select id="c-pmode"><option value="off">off — nessun proxy</option><option value="rotate">rotate — il monitor alterna i proxy</option><option value="sticky">sticky — un proxy per profilo negli ordini</option></select></div>
-                <div class="field full"><label>Lista proxy (uno per riga: <code>http://user:pass@host:porta</code> o <code>socks5://…</code>)</label><textarea id="c-proxies" rows="4" style="width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea></div>
-              </div>
-            </div>
+                <div class="field full"><label>Sorgenti (una per riga: <code>tipo URL</code>; tipo = category/search/product/rss/shopify/auto)</label><textarea id="c-sources" rows="4"></textarea></div>
+              </div></div>
+            <div class="card"><h3><svg class="i"><use href="#i-globe"/></svg>Proxy</h3>
+              <div class="form"><div class="field"><label>Modalità</label><select id="c-pmode"><option value="off">off — nessun proxy</option><option value="rotate">rotate — il monitor alterna i proxy</option><option value="sticky">sticky — un proxy per profilo negli ordini</option></select></div>
+              <div class="field full"><label>Lista proxy (uno per riga)</label><textarea id="c-proxies" rows="4" placeholder="http://user:pass@host:porta"></textarea></div></div></div>
           </div>
           <div>
-            <div class="card glass" style="margin-bottom:16px">
-              <h3>Notifiche</h3>
+            <div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-bell"/></svg>Notifiche</h3>
               <div class="form">
                 <label class="switch full"><input type="checkbox" id="c-tg"> Telegram (notifiche, /status, conferma ordini con bottoni)</label>
-                <div class="field"><label>Bot token</label><input id="c-tgtoken" type="password" autocomplete="off" placeholder="lascia vuoto per non cambiarlo"></div>
-                <div class="field"><label>Chat ID</label><input id="c-tgchat" autocomplete="off" placeholder="lascia vuoto per non cambiarlo"></div>
+                <div class="field"><label>Bot token</label><input id="c-tgtoken" type="password" autocomplete="off"></div>
+                <div class="field"><label>Chat ID</label><input id="c-tgchat" autocomplete="off"></div>
                 <label class="switch full"><input type="checkbox" id="c-tgcmd"> Rispondi ai comandi sul bot</label>
-                <div class="field full"><label>Discord webhook (solo notifiche)</label><input id="c-discord" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/… (vuoto = non cambiare)"></div>
+                <div class="field full"><label>Discord webhook (solo notifiche)</label><input id="c-discord" type="password" autocomplete="off"></div>
                 <label class="switch full"><input type="checkbox" id="c-price"> Notifica anche i cambi di prezzo</label>
                 <label class="switch full"><input type="checkbox" id="c-startup"> Messaggio all'avvio del monitor</label>
                 <div class="field"><label>Avvisa dopo N errori consecutivi (0 = mai)</label><input id="c-errs" type="number" min="0"></div>
-              </div>
-            </div>
-            <div class="card glass">
-              <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" id="c-save">Salva impostazioni</button><button class="btn" id="c-reload">Annulla modifiche</button></div>
-              <p class="note" style="margin-top:12px" id="c-info">Le impostazioni vanno in <code>config.yaml</code>; token e webhook in <code>.env</code>. Il salvataggio viene validato prima di scrivere. Riavvia il monitor per applicare.</p>
-            </div>
+              </div></div>
+            <div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-gear"/></svg>Preferenze finestra</h3>
+              <div class="form"><label class="switch full"><input type="checkbox" id="pref-compact"> Barra laterale compatta</label><label class="switch full"><input type="checkbox" id="pref-desktop"> Notifiche desktop del browser quando un prodotto diventa disponibile</label><div class="field"><label>Aggiornamento dati (s)</label><input id="pref-poll" type="number" min="3" value="15"></div></div>
+              <p class="note" style="margin-top:8px">Preferenze salvate in questo browser.</p></div>
+            <div class="card"><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" id="c-save"><svg class="i"><use href="#i-save"/></svg>Salva impostazioni</button><button class="btn" id="c-reload">Annulla modifiche</button></div><p class="note" style="margin-top:12px">Le impostazioni vanno in <code>config.yaml</code>; token e webhook in <code>.env</code>. Il salvataggio viene validato prima di scrivere. Riavvia il monitor per applicare.</p></div>
           </div>
         </div>
       </section>
     </div>
   </main>
 </div>
-<div class="toast glass" id="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 const $ = s => document.querySelector(s);
-const api = async (path, opt={}) => {
-  const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opt, body: opt.body ? JSON.stringify(opt.body) : undefined});
-  const j = await r.json().catch(()=>({error:'risposta non valida'}));
-  if (!r.ok) throw new Error(j.error || r.statusText);
-  return j;
-};
-const toast = (msg, cls='') => { const t=$('#toast'); t.textContent=msg; t.className='toast glass show '+cls; setTimeout(()=>t.classList.remove('show'), 3200); };
+const api = async (path, opt={}) => { const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opt, body: opt.body ? JSON.stringify(opt.body) : undefined}); const j = await r.json().catch(()=>({error:'risposta non valida'})); if (!r.ok) throw new Error(j.error || r.statusText); return j; };
+const toast = (msg, cls='') => { const t=$('#toast'); t.textContent=msg; t.className='toast show '+cls; setTimeout(()=>t.classList.remove('show'), 3600); };
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ago = iso => { if(!iso) return 'mai'; const s=Math.round((Date.now()-new Date(iso))/1000); if(s<90) return s+'s fa'; if(s<5400) return Math.round(s/60)+'m fa'; return Math.round(s/3600)+'h fa'; };
 const STATE = {available:'Disponibile', present_unavailable:'Esaurito', absent:'Non presente'};
+const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem('prefs')||'{}'); }catch(e){ return {}; } })();
+const savePrefs = ()=>{ try{ localStorage.setItem('prefs', JSON.stringify(prefs)); }catch(e){} };
 
-// ---- theme + navigation
-const root=document.documentElement;
-try{ root.dataset.theme = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'); }catch(e){ root.dataset.theme='dark'; }
-$('#theme').onclick=()=>{ root.dataset.theme = root.dataset.theme==='light'?'dark':'light'; try{localStorage.setItem('theme',root.dataset.theme)}catch(e){} };
-const TITLES={dashboard:['Dashboard','monitor drop e restock'],tasks:['Tasks','prodotti osservati e task di acquisto'],profiles:['Profili','account, indirizzi e preferenze d’ordine'],account:['Account','registrazione assistita sul negozio'],settings:['Impostazioni','intervalli, proxy, notifiche']};
+// ---- sidebar
+const app=$('#app'); if(prefs.compact) app.classList.add('compact');
+$('#brand-toggle').onclick=()=>{ app.classList.toggle('compact'); prefs.compact=app.classList.contains('compact'); savePrefs(); $('#pref-compact').checked=prefs.compact; };
+const TITLES={dashboard:['Dashboard','monitor drop e restock'],tasks:['Tasks','prodotti osservati e task di acquisto'],profiles:['Profili','account, indirizzi, billing e preferenze'],account:['Account','registrazione assistita sul negozio'],modules:['Moduli','procedure studiate per ogni sito'],learn:['Imparo','come funziona, parola per parola'],settings:['Impostazioni','monitor, proxy, notifiche, aggiornamenti']};
 document.querySelectorAll('.nav[data-view]').forEach(n=>n.onclick=()=>show(n.dataset.view));
-function show(v){ document.querySelectorAll('.nav[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===v)); document.querySelectorAll('section[id^=view-]').forEach(s=>s.classList.toggle('hidden',s.id!=='view-'+v)); $('#title').textContent=TITLES[v][0]; $('#subtitle').textContent=TITLES[v][1]; if(v==='profiles') loadProfiles(); if(v==='account') fillRegisterProfiles(); if(v==='settings'||v==='tasks'){ (profiles.length?Promise.resolve():api('/api/profiles').then(r=>{profiles=r.profiles}).catch(()=>{})).then(loadConfig); } }
+function show(v){ document.querySelectorAll('.nav[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===v)); document.querySelectorAll('section[id^=view-]').forEach(s=>s.classList.toggle('hidden',s.id!=='view-'+v)); $('#title').textContent=TITLES[v][0]; $('#subtitle').textContent=TITLES[v][1]; if(v==='profiles') loadProfiles(); if(v==='account') fillRegisterProfiles(); if(v==='modules') loadModules(); if(v==='settings'||v==='tasks'){ (profiles.length?Promise.resolve():api('/api/profiles').then(r=>{profiles=r.profiles}).catch(()=>{})).then(loadConfig); } if(v==='settings') updCheck(true); }
 
-// ---- dashboard / tasks / settings
-let status=null;
+// ---- status
+let status=null, lastAvail=new Set();
 async function loadStatus(){
-  try{ status = await api('/api/status'); }catch(e){ $('#htext').textContent='UI non raggiunge il server'; return; }
-  $('#ver').textContent='drop-monitor '+status.version; renderController(status.controller);
+  try{ status = await api('/api/status'); }catch(e){ $('#htext').textContent='server non raggiungibile'; return; }
+  $('#ver').textContent='v'+status.version; renderController(status.controller);
   $('#hdot').className='dot '+(status.health.ok?'ok':'bad'); $('#htext').textContent=status.health.ok?'monitor attivo':'monitor fermo';
   $('#s-tasks').textContent=status.watches.length; $('#s-seen').textContent=status.seen;
-  $('#s-avail').textContent=status.tracked.filter(t=>t.state==='available').length;
+  const avail=status.tracked.filter(t=>t.state==='available'); $('#s-avail').textContent=avail.length;
+  $('#b-dash').textContent=avail.length; $('#b-dash').className='badge '+(avail.length?'':'off'); $('#b-tasks').textContent=status.tasks.length; $('#b-tasks').className='badge '+(status.tasks.length?'':'off');
+  avail.forEach(t=>{ if(!lastAvail.has(t.label) && prefs.desktop && 'Notification' in window && Notification.permission==='granted') new Notification('Disponibile: '+(t.title||t.label), {body:(t.price||'')+' · '+(t.url||'')}); }); lastAvail=new Set(avail.map(t=>t.label));
   const last=status.tracked.map(t=>t.last_checked).filter(Boolean).sort().pop(); $('#s-last').textContent=ago(last);
   $('#tracked').innerHTML = status.tracked.length ? status.tracked.map(t=>`<div class="row"><div><div class="t">${esc(t.title||t.label)}</div><div class="m">${t.price?esc(t.price)+' · ':''}visto ${ago(t.last_seen)} · check ${ago(t.last_checked)} ${t.url?`· <a href="${esc(t.url)}" target="_blank" rel="noopener">pagina</a>`:''}</div></div><span class="pill ${t.state}">${STATE[t.state]||t.state}</span></div>`).join('') : '<div class="note">Nessuna osservazione ancora: avvia il monitor.</div>';
   $('#events').innerHTML = status.events.length ? status.events.map(e=>`<div class="row"><div><div class="t" style="font-size:13px">${esc(e.watch_key)}</div><div class="m">${esc(e.old_state||'—')} → <b>${esc(e.new_state)}</b> ${e.price?'· '+esc(e.price):''} · ${esc(e.note||'')}</div></div><span class="note">${ago(e.ts)}</span></div>`).join('') : '<div class="note">Ancora nessun evento.</div>';
-  const taskRows = status.tasks.map(t=>`<div class="row"><div><div class="t">${esc(t.name)}</div><div class="m">${esc(t.product)} × ${t.quantity} · profili: ${esc(t.profiles.join(', '))} · max ${t.max_total_eur} €${t.confirm_on_telegram?' · conferma Telegram':''}</div></div><span class="pill ${t.mode==='auto_checkout'?'available':''}">${t.mode==='auto_checkout'?'Auto-checkout':'Monitor'}</span></div>`);
-  $('#tasks').innerHTML = taskRows.join('') + status.watches.filter(w=>!status.tasks.some(t=>t.product===w.label||t.product===w.keywords)).map(w=>`<div class="row"><div><div class="t">${esc(w.label)}</div><div class="m">chiavi: ${esc(w.keywords)}${w.exclude&&w.exclude.length?' · esclude: '+esc(w.exclude.join(', ')):''}${w.url?' · URL fissato':''}</div></div><span class="pill">Monitor</span></div>`).join('');
+  const taskRowsHtml = status.tasks.map(t=>`<div class="row"><div><div class="t">${esc(t.name)}</div><div class="m">${esc(t.product)} × ${t.quantity} · profili: ${esc(t.profiles.join(', '))} · max ${t.max_total_eur} €${t.confirm_on_telegram?' · conferma Telegram':''}</div></div><span class="pill ${t.mode==='auto_checkout'?'available':''}">${t.mode==='auto_checkout'?'auto-checkout':'monitor'}</span></div>`);
+  $('#tasks').innerHTML = taskRowsHtml.join('') + status.watches.filter(w=>!status.tasks.some(t=>t.product===w.label||t.product===w.keywords)).map(w=>`<div class="row"><div><div class="t">${esc(w.label)}</div><div class="m">chiavi: ${esc(w.keywords)}${w.exclude&&w.exclude.length?' · esclude: '+esc(w.exclude.join(', ')):''}${w.url?' · URL fissato':''}</div></div><span class="pill">monitor</span></div>`).join('');
   $('#orders').innerHTML = status.orders.length ? status.orders.map(o=>`<div class="row"><div><div class="t" style="font-size:13px">${esc(o.task)} / ${esc(o.profile)}</div><div class="m">${esc(o.product||'')} · ${o.total_eur?o.total_eur+' €':''} · ${esc(o.note||'')}${o.order_url?` · <a href="${esc(o.order_url)}" target="_blank" rel="noopener">link</a>`:''}</div></div><span class="pill ${o.status==='placed'||o.status==='pending_payment'?'available':(o.status==='dry_run'?'':'present_unavailable')}">${esc(o.status)}</span></div>`).join('') : '<div class="note">Nessun ordine ancora.</div>';
-  $('#sources').innerHTML = status.sources.map(s=>`<div class="row"><div><div class="t" style="font-size:13px">${esc(s.type)}</div><div class="m"><code>${esc(s.url)}</code></div></div></div>`).join('');
-  $('#polling').innerHTML = `<div>Intervallo</div><div>${status.polling.min}–${status.polling.max} s</div><div>Hot ratio</div><div>${status.polling.hot_ratio} pagine prodotto per ogni lista</div><div>Telegram</div><div>${status.telegram.enabled?'attivo · chat '+esc(status.telegram.chat_id):'disattivato'}</div>`;
 }
 $('#refresh').onclick=()=>{loadStatus();toast('Aggiornato')};
 
-// ---- monitor controls (app mode)
-function renderController(c){ const pill=$('#mon-pill'); if(!c){ pill.textContent='monitor: esterno'; pill.className='pill'; ['#mon-start','#mon-dry','#mon-stop'].forEach(x=>$(x).disabled=true); return; } pill.textContent = c.running ? ('monitor attivo'+(c.dry_run?' (dry-run)':'')+' · ciclo '+c.cycle) : 'monitor fermo'; pill.className='pill '+(c.running?'available':'present_unavailable'); $('#mon-start').disabled=c.running; $('#mon-dry').disabled=c.running; $('#mon-stop').disabled=!c.running; if(c.last_error) toast(c.last_error,'err'); }
-async function monitorAction(a, dry){ try{ const r=await api('/api/monitor/'+a,{method:'POST',body:{dry_run:!!dry}}); renderController(r); toast(a==='stop'?'Monitor fermato':'Monitor avviato'+(dry?' in dry-run':''),'ok'); setTimeout(loadStatus,800); }catch(e){ toast(e.message,'err'); } }
-$('#mon-start').onclick=()=>monitorAction('start',false); $('#mon-dry').onclick=()=>monitorAction('start',true); $('#mon-stop').onclick=()=>monitorAction('stop');
+// ---- monitor controls
+function renderController(c){ const pill=$('#mon-pill'); if(!c){ pill.textContent='monitor esterno'; pill.className='pill'; ['#mon-start','#mon-dry','#mon-stop','#mon-sched'].forEach(x=>$(x).disabled=true); return; } pill.textContent = c.running ? ('monitor attivo'+(c.dry_run?' · dry-run':'')+' · ciclo '+c.cycle) : (c.scheduled_at ? 'avvio programmato '+c.scheduled_at.replace('T',' ') : 'monitor fermo'); pill.className='pill '+(c.running?'ok':(c.scheduled_at?'warn':'bad')); $('#mon-start').disabled=c.running; $('#mon-dry').disabled=c.running; $('#mon-stop').disabled=!c.running && !c.scheduled_at; $('#mon-sched').disabled=c.running; if(c.last_error) toast(c.last_error,'err'); }
+async function monitorAction(a, body){ try{ const r=await api('/api/monitor/'+a,{method:'POST',body:body||{}}); renderController(r); toast(a==='stop'?'Monitor fermato':(a==='schedule'?'Avvio programmato':'Monitor avviato'+(body&&body.dry_run?' in dry-run':'')),'ok'); setTimeout(loadStatus,800); }catch(e){ toast(e.message,'err'); } }
+$('#mon-start').onclick=()=>monitorAction('start',{dry_run:false}); $('#mon-dry').onclick=()=>monitorAction('start',{dry_run:true});
+$('#mon-stop').onclick=()=>{ monitorAction('stop'); monitorAction('schedule',{at:null}); };
+$('#mon-sched').onclick=()=>{ const at=$('#mon-at').value; if(!at){toast('Scegli data e ora del drop','warn');return;} monitorAction('schedule',{at, dry_run:false}); };
 
-// ---- settings editor
-let cfg=null;
-const TA = s => s.split('\n').map(x=>x.trim()).filter(Boolean);
+// ---- settings
+let cfg=null; const TA = s => s.split('\n').map(x=>x.trim()).filter(Boolean);
 async function loadConfig(){ try{ cfg=await api('/api/config'); }catch(e){ toast(e.message,'err'); return; } const p=cfg.polling||{}, t=cfg.telegram||{}, n=cfg.notify||{}, net=cfg.network||{}, site=cfg.site||{};
   $('#c-min').value=p.min_seconds??30; $('#c-max').value=p.max_seconds??60; $('#c-hot').value=p.hot_ratio??2; $('#c-timeout').value=p.timeout_seconds??20; $('#c-bbase').value=p.backoff_base_seconds??60; $('#c-bmax').value=p.backoff_max_seconds??900; $('#c-ua').value=p.user_agent||''; $('#c-robots').checked=p.respect_robots!==false; $('#c-track').checked=site.track_product_pages!==false;
-  $('#c-sources').value=(site.sources||[]).map(x=>typeof x==='string'?('auto '+x):((x.type||'auto')+' '+x.url)).join('\n');
-  $('#c-pmode').value=net.proxy_mode||'off'; $('#c-proxies').value=(net.proxies||[]).join('\n');
-  $('#c-tg').checked=t.enabled!==false; $('#c-tgcmd').checked=t.commands!==false; $('#c-tgtoken').value=''; $('#c-tgchat').value=''; $('#c-tgtoken').placeholder=t.has_bot_token?'•••••• salvato (vuoto = non cambiare)':'inserisci il token di @BotFather'; $('#c-tgchat').placeholder=t.has_chat_id?'•••••• salvato (vuoto = non cambiare)':'chat id';
+  $('#c-sources').value=(site.sources||[]).map(x=>typeof x==='string'?('auto '+x):((x.type||'auto')+' '+x.url)).join('\n'); $('#c-pmode').value=net.proxy_mode||'off'; $('#c-proxies').value=(net.proxies||[]).join('\n');
+  $('#c-tg').checked=t.enabled!==false; $('#c-tgcmd').checked=t.commands!==false; $('#c-tgtoken').value=''; $('#c-tgchat').value=''; $('#c-tgtoken').placeholder=t.has_bot_token?'•••••• salvato (vuoto = non cambiare)':'token di @BotFather'; $('#c-tgchat').placeholder=t.has_chat_id?'•••••• salvato (vuoto = non cambiare)':'chat id';
   $('#c-discord').value=''; $('#c-discord').placeholder=n.has_discord_webhook_url?'•••••• salvato (vuoto = non cambiare)':'https://discord.com/api/webhooks/… (opzionale)'; $('#c-price').checked=!!n.on_price_change; $('#c-startup').checked=n.startup_message!==false; $('#c-errs').value=n.error_after_consecutive??10;
   renderProducts(cfg.products||[]); renderTasks(cfg.tasks||[]); }
 function readConfig(){ const sources=TA($('#c-sources').value).map(l=>{ const [type,...rest]=l.split(/\s+/); return rest.length?{type,url:rest.join(' ')}:{type:'auto',url:type}; });
@@ -324,45 +408,54 @@ function readConfig(){ const sources=TA($('#c-sources').value).map(l=>{ const [t
     network:{proxy_mode:$('#c-pmode').value, proxies:TA($('#c-proxies').value)} }; }
 $('#c-save').onclick=async()=>{ try{ cfg=await api('/api/config',{method:'PUT',body:readConfig()}); toast('Impostazioni salvate. Riavvia il monitor per applicarle.','ok'); await loadConfig(); loadStatus(); }catch(e){ toast(e.message,'err'); } };
 $('#c-reload').onclick=()=>{loadConfig(); toast('Modifiche annullate');};
+$('#pref-compact').checked=!!prefs.compact; $('#pref-compact').onchange=e=>{ prefs.compact=e.target.checked; app.classList.toggle('compact',prefs.compact); savePrefs(); };
+$('#pref-desktop').checked=!!prefs.desktop; $('#pref-desktop').onchange=async e=>{ prefs.desktop=e.target.checked; savePrefs(); if(prefs.desktop && 'Notification' in window && Notification.permission!=='granted'){ const p=await Notification.requestPermission(); if(p!=='granted'){ toast('Permesso notifiche negato dal browser','warn'); } } };
+$('#pref-poll').value=prefs.poll||15; $('#pref-poll').onchange=e=>{ prefs.poll=Math.max(3,+e.target.value||15); savePrefs(); clearInterval(pollTimer); pollTimer=setInterval(loadStatus, prefs.poll*1000); };
+
+// ---- updates
+async function updCheck(silent){ try{ const r=await api('/api/update/check'); $('#upd-ver').textContent=r.version+(r.remote_version&&r.remote_version!==r.version?'  →  '+r.remote_version:''); $('#upd-inst').textContent=r.installed||'–'; $('#upd-latest').textContent=r.ok?(r.latest+' · '+(r.message||'')):(r.error||'–'); const av=!!(r.ok&&r.update_available); $('#upd-apply').classList.toggle('hidden',!av); $('#b-upd').classList.toggle('hidden',!av); if(!silent) toast(av?'Aggiornamento disponibile':'Sei aggiornato', av?'warn':'ok'); }catch(e){ if(!silent) toast(e.message,'err'); } }
+$('#upd-check').onclick=()=>updCheck(false);
+$('#upd-apply').onclick=async()=>{ if(!confirm('Scaricare e installare l\'aggiornamento? Il monitor viene fermato e l\'app riavviata.')) return; $('#upd-apply').disabled=true; $('#upd-note').textContent='Download e installazione in corso…'; try{ const r=await api('/api/update/apply',{method:'POST',body:{}}); if(!r.ok){ $('#upd-note').textContent=r.error+(r.detail?' — '+r.detail:''); toast(r.error,'err'); return; } $('#upd-note').textContent=`Installato ${r.installed} (${r.changed} file). Riavvio…`; await api('/api/restart',{method:'POST',body:{}}); setTimeout(()=>location.reload(), 4000); }catch(e){ toast(e.message,'err'); } finally{ $('#upd-apply').disabled=false; } };
+$('#app-restart').onclick=async()=>{ if(!confirm('Riavviare l\'app?')) return; try{ await api('/api/restart',{method:'POST',body:{}}); toast('Riavvio…'); setTimeout(()=>location.reload(), 4000); }catch(e){ toast(e.message,'err'); } };
 
 // ---- products & tasks editor
 let prodRows=[], taskRows=[];
-function renderProducts(items){ prodRows=items.map(x=>typeof x==='string'?{keywords:x}:{...x}); $('#prod-list').innerHTML=prodRows.map((p,i)=>`<div class="row" style="align-items:flex-start"><div class="form" style="flex:1;grid-template-columns:2fr 1fr 1fr"><div class="field"><label>Parole chiave</label><input data-i="${i}" data-k="keywords" value="${esc(p.keywords||'')}"></div><div class="field"><label>Escludi (virgole)</label><input data-i="${i}" data-k="exclude" value="${esc((p.exclude||[]).join(', '))}"></div><div class="field"><label>Nome (opz.)</label><input data-i="${i}" data-k="name" value="${esc(p.name||'')}"></div><div class="field full"><label>URL esatto (opz.)</label><input data-i="${i}" data-k="url" value="${esc(p.url||'')}"></div></div><button class="btn sm danger" data-del="${i}">✕</button></div>`).join('') || '<div class="note">Nessun prodotto: aggiungine uno.</div>';
+function renderProducts(items){ prodRows=items.map(x=>typeof x==='string'?{keywords:x}:{...x}); $('#prod-list').innerHTML=prodRows.map((p,i)=>`<div class="row" style="align-items:flex-start"><div class="form" style="flex:1;grid-template-columns:2fr 1fr 1fr"><div class="field"><label>Parole chiave</label><input data-i="${i}" data-k="keywords" value="${esc(p.keywords||'')}"></div><div class="field"><label>Escludi (virgole)</label><input data-i="${i}" data-k="exclude" value="${esc((p.exclude||[]).join(', '))}"></div><div class="field"><label>Nome (opz.)</label><input data-i="${i}" data-k="name" value="${esc(p.name||'')}"></div><div class="field full"><label>URL esatto (opz.)</label><input data-i="${i}" data-k="url" value="${esc(p.url||'')}"></div></div><button class="btn sm danger" data-del="${i}" title="Rimuovi"><svg class="i"><use href="#i-x"/></svg></button></div>`).join('') || '<div class="note">Nessun prodotto: aggiungine uno o usa il quick task.</div>';
   $('#prod-list').querySelectorAll('input').forEach(inp=>inp.oninput=()=>{ const r=prodRows[+inp.dataset.i]; r[inp.dataset.k]= inp.dataset.k==='exclude' ? inp.value.split(',').map(x=>x.trim()).filter(Boolean) : inp.value; });
   $('#prod-list').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ prodRows.splice(+b.dataset.del,1); renderProducts(prodRows); renderTasks(taskRows); }); }
 function renderTasks(items){ taskRows=items.map(x=>({...x})); const prodOpts=prodRows.map(p=>p.name||p.keywords).filter(Boolean); const profOpts=profiles.map(p=>p.name);
-  $('#task-list').innerHTML=taskRows.map((t,i)=>`<div class="row" style="align-items:flex-start"><div class="form" style="flex:1;grid-template-columns:repeat(3,1fr)"><div class="field"><label>Nome</label><input data-i="${i}" data-k="name" value="${esc(t.name||'')}"></div><div class="field"><label>Prodotto</label><select data-i="${i}" data-k="product">${prodOpts.map(o=>`<option ${o===t.product?'selected':''}>${esc(o)}</option>`).join('')}</select></div><div class="field"><label>Modalità</label><select data-i="${i}" data-k="mode"><option value="monitor" ${t.mode!=='auto_checkout'?'selected':''}>monitor</option><option value="auto_checkout" ${t.mode==='auto_checkout'?'selected':''}>auto_checkout</option></select></div><div class="field"><label>Profili (virgole)</label><input data-i="${i}" data-k="profiles" value="${esc((t.profiles||['default']).join(', '))}" placeholder="${esc(profOpts.join(', '))}"></div><div class="field"><label>Quantità</label><input type="number" min="1" data-i="${i}" data-k="quantity" value="${t.quantity||1}"></div><div class="field"><label>Spesa max (€)</label><input type="number" data-i="${i}" data-k="max_total_eur" value="${t.max_total_eur??150}"></div><div class="field"><label>Pagamento (parte del nome)</label><input data-i="${i}" data-k="payment_method" value="${esc(t.payment_method||'')}" placeholder="PayPal"></div><div class="field"><label>Spedizione (parte del nome)</label><input data-i="${i}" data-k="shipping_method" value="${esc(t.shipping_method||'')}"></div><div class="field"><label>Timeout conferma (s)</label><input type="number" data-i="${i}" data-k="confirm_timeout_seconds" value="${t.confirm_timeout_seconds??300}"></div><label class="switch"><input type="checkbox" data-i="${i}" data-k="confirm_on_telegram" ${t.confirm_on_telegram!==false?'checked':''}> Conferma su Telegram</label><label class="switch"><input type="checkbox" data-i="${i}" data-k="enabled" ${t.enabled!==false?'checked':''}> Attivo</label></div><button class="btn sm danger" data-del="${i}">✕</button></div>`).join('') || '<div class="note">Nessun task: il monitor notifica soltanto.</div>';
+  $('#task-list').innerHTML=taskRows.map((t,i)=>`<div class="row" style="align-items:flex-start"><div class="form" style="flex:1;grid-template-columns:repeat(3,1fr)"><div class="field"><label>Nome</label><input data-i="${i}" data-k="name" value="${esc(t.name||'')}"></div><div class="field"><label>Prodotto</label><select data-i="${i}" data-k="product">${prodOpts.map(o=>`<option ${o===t.product?'selected':''}>${esc(o)}</option>`).join('')}</select></div><div class="field"><label>Modalità</label><select data-i="${i}" data-k="mode"><option value="monitor" ${t.mode!=='auto_checkout'?'selected':''}>monitor</option><option value="auto_checkout" ${t.mode==='auto_checkout'?'selected':''}>auto_checkout</option></select></div><div class="field"><label>Profili (virgole)</label><input data-i="${i}" data-k="profiles" value="${esc((t.profiles||['default']).join(', '))}" placeholder="${esc(profOpts.join(', '))}"></div><div class="field"><label>Quantità</label><input type="number" min="1" data-i="${i}" data-k="quantity" value="${t.quantity||1}"></div><div class="field"><label>Spesa max (€)</label><input type="number" data-i="${i}" data-k="max_total_eur" value="${t.max_total_eur??150}"></div><div class="field"><label>Max checkouts (0 = illimitati)</label><input type="number" min="0" data-i="${i}" data-k="max_checkouts" value="${t.max_checkouts??0}"></div><div class="field"><label>Pagamento (parte del nome)</label><input data-i="${i}" data-k="payment_method" value="${esc(t.payment_method||'')}" placeholder="PayPal"></div><div class="field"><label>Spedizione (parte del nome)</label><input data-i="${i}" data-k="shipping_method" value="${esc(t.shipping_method||'')}"></div><div class="field"><label>Timeout conferma (s)</label><input type="number" data-i="${i}" data-k="confirm_timeout_seconds" value="${t.confirm_timeout_seconds??300}"></div><label class="switch"><input type="checkbox" data-i="${i}" data-k="confirm_on_telegram" ${t.confirm_on_telegram!==false?'checked':''}> Conferma Telegram</label><label class="switch"><input type="checkbox" data-i="${i}" data-k="enabled" ${t.enabled!==false?'checked':''}> Attivo</label></div><button class="btn sm danger" data-del="${i}" title="Rimuovi"><svg class="i"><use href="#i-x"/></svg></button></div>`).join('') || '<div class="note">Nessun task: il monitor notifica soltanto.</div>';
   $('#task-list').querySelectorAll('input,select').forEach(inp=>{ const h=()=>{ const r=taskRows[+inp.dataset.i], k=inp.dataset.k; if(inp.type==='checkbox') r[k]=inp.checked; else if(k==='profiles') r[k]=inp.value.split(',').map(x=>x.trim()).filter(Boolean); else if(inp.type==='number') r[k]=+inp.value; else r[k]=inp.value; }; inp.oninput=h; inp.onchange=h; });
   $('#task-list').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ taskRows.splice(+b.dataset.del,1); renderTasks(taskRows); }); }
 $('#prod-add').onclick=()=>{ prodRows.push({keywords:''}); renderProducts(prodRows); renderTasks(taskRows); };
-$('#task-add').onclick=()=>{ const first=prodRows[0]?(prodRows[0].name||prodRows[0].keywords):''; taskRows.push({name:'task'+(taskRows.length+1), product:first, profiles:['default'], quantity:1, mode:'monitor', max_total_eur:150, confirm_on_telegram:true, enabled:true}); renderTasks(taskRows); };
+$('#task-add').onclick=()=>{ const first=prodRows[0]?(prodRows[0].name||prodRows[0].keywords):''; taskRows.push({name:'task'+(taskRows.length+1), product:first, profiles:['default'], quantity:1, mode:'monitor', max_total_eur:150, max_checkouts:0, confirm_on_telegram:true, enabled:true}); renderTasks(taskRows); };
 $('#tp-save').onclick=async()=>{ try{ cfg=await api('/api/config',{method:'PUT',body:{products:prodRows.filter(p=>(p.keywords||'').trim()), tasks:taskRows}}); toast('Prodotti e task salvati. Riavvia il monitor.','ok'); await loadConfig(); loadStatus(); }catch(e){ toast(e.message,'err'); } };
+$('#qt-go').onclick=async()=>{ const url=$('#qt-url').value.trim(); if(!url){toast('Incolla un URL','warn');return;} $('#qt-go').disabled=true; $('#qt-res').textContent='Leggo la pagina…'; try{ const r=await api('/api/quick-task',{method:'POST',body:{url, mode:$('#qt-mode').value, profiles:$('#qt-prof').value.split(',').map(x=>x.trim()).filter(Boolean)}}); $('#qt-res').innerHTML=`<span class="ok">Creato task <b>${esc(r.task.name)}</b></span> — ${esc(r.product.title)} · ${esc(r.product.price||'')} · <span class="pill ${r.product.availability==='available'?'available':'present_unavailable'}">${esc(r.product.availability)}</span>`; await loadConfig(); loadStatus(); toast('Quick task creato','ok'); }catch(e){ $('#qt-res').innerHTML=`<span class="err">${esc(e.message)}</span>`; } finally{ $('#qt-go').disabled=false; } };
 
-// ---- profiles
+// ---- profiles + 3D card
 let profiles=[], current='default', provinces={};
-const P = {
-  read(){ return {account:{email:$('#p-email').value.trim()}, shipping:{first_name:$('#p-first').value.trim(), last_name:$('#p-last').value.trim(), company:$('#p-company').value.trim(), address1:$('#p-address1').value.trim(), address2:$('#p-address2').value.trim(), zip:$('#p-zip').value.trim(), city:$('#p-city').value.trim(), province:$('#p-province').selectedOptions[0]?.textContent||'', province_id:+$('#p-province').value||0, country:$('#p-country').selectedOptions[0]?.textContent||'', country_id:+$('#p-country').value||46, phone:$('#p-phone').value.trim()}, billing:{fiscal_code:$('#p-cf').value.trim(), vat_number:$('#p-vat').value.trim(), sdi_code:$('#p-sdi').value.trim(), pec:$('#p-pec').value.trim()}, preferences:{max_quantity_per_order:+$('#p-qty').value||1, max_total_eur:+$('#p-max').value||0, payment_method:$('#p-pay').value.trim(), referral:$('#p-ref').value, confirm_on_telegram:$('#p-confirm').checked, newsletter:$('#p-news').checked}}; },
-  write(p){ $('#p-name').value=p.name; $('#p-name').disabled = p.name==='default' || profiles.some(x=>x.name===p.name); $('#p-email').value=p.account.email||''; $('#p-password').value=''; $('#p-password').placeholder = p.has_password?'•••••• salvata (lascia vuoto per non cambiarla)':'nessuna password salvata'; const s=p.shipping; $('#p-first').value=s.first_name; $('#p-last').value=s.last_name; $('#p-company').value=s.company; $('#p-address1').value=s.address1; $('#p-address2').value=s.address2; $('#p-zip').value=s.zip; $('#p-city').value=s.city; $('#p-phone').value=s.phone; $('#p-country').value=String(s.country_id||46); setProvince(s.province_id, s.province); const b=p.billing; $('#p-cf').value=b.fiscal_code; $('#p-vat').value=b.vat_number; $('#p-sdi').value=b.sdi_code; $('#p-pec').value=b.pec; const f=p.preferences; $('#p-qty').value=f.max_quantity_per_order; $('#p-max').value=f.max_total_eur; $('#p-pay').value=f.payment_method; $('#p-ref').value=f.referral||''; $('#p-confirm').checked=!!f.confirm_on_telegram; $('#p-news').checked=!!f.newsletter; }
-};
 const REFERRALS=[['1','Google'],['2','Facebook'],['3','Instagram'],['4','TikTok'],['5','Passaparola'],['7','Giornali, Riviste o Volantini'],['8','Clienti Gemcard Infinity Collection']];
 $('#p-ref').innerHTML='<option value="">non indicato</option>'+REFERRALS.map(([v,l])=>`<option value="${v}">${esc(l)}</option>`).join('');
-async function setProvince(id, name){
-  const c=$('#p-country').value;
-  if(!provinces[c]){ try{ provinces[c]=await api('/api/states?country='+c); }catch(e){ provinces[c]=[]; $('#p-province').innerHTML=`<option value="${id||0}">${esc(name||'(sito non raggiungibile)')}</option>`; return; } }
-  $('#p-province').innerHTML='<option value="0">— seleziona —</option>'+provinces[c].map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
-  if(id) $('#p-province').value=String(id); else if(name){ const m=provinces[c].find(s=>s.name.toLowerCase()===name.toLowerCase()); if(m) $('#p-province').value=String(m.id); }
-}
+const cc=$('#cc');
+function ccRender(){ const raw=$('#pc-number').value.replace(/\D/g,'').slice(0,19); const brand = raw.startsWith('4')?'VISA':(/^(5[1-5]|2[2-7])/.test(raw)?'MASTERCARD':(/^3[47]/.test(raw)?'AMEX':'CARD')); $('#cc-brand').textContent=brand; const groups=[0,1,2,3].map(i=>{ const g=raw.slice(i*4,i*4+4); return `<span class="${g?'on':''}">${g.padEnd(4,'•')}</span>`; }); $('#cc-num').innerHTML=groups.join(''); const h=$('#pc-holder').value.trim(); $('#cc-holder').textContent=h||'NOME COGNOME'; $('#cc-holder').className='val '+(h?'on':''); const e=$('#pc-exp').value; $('#cc-exp').textContent=e||'MM/AA'; $('#cc-exp').className='val '+(e?'on':''); const c=$('#pc-cvv').value; $('#cc-cvv').textContent=c?('•'.repeat(c.length)):'•••'; $('#cc-cvv').className=c?'on':''; }
+function ccTilt(field){ cc.classList.remove('flip'); let ry=0, rx=0; if(field==='cvv'){ cc.classList.add('flip'); return; } if(field==='number'){ const inp=$('#pc-number'); const frac=Math.min(1,(inp.selectionStart||inp.value.length)/19); ry=(0.5-frac)*28; rx=-6; } else if(field==='holder'){ ry=14; rx=6; } else if(field==='exp'){ ry=-14; rx=6; } cc.style.transform=`rotateY(${ry}deg) rotateX(${rx}deg)`; }
+$('#pc-number').addEventListener('input',e=>{ const d=e.target.value.replace(/\D/g,'').slice(0,19); e.target.value=d.replace(/(.{4})/g,'$1 ').trim(); ccRender(); ccTilt('number'); });
+[['#pc-number','number'],['#pc-holder','holder'],['#pc-exp','exp'],['#pc-cvv','cvv']].forEach(([s,f])=>{ const el=$(s); el.addEventListener('focus',()=>ccTilt(f)); el.addEventListener('keyup',()=>ccTilt(f)); el.addEventListener('click',()=>ccTilt(f)); el.addEventListener('input',ccRender); el.addEventListener('blur',()=>{ cc.classList.remove('flip'); cc.style.transform=''; }); });
+$('#pc-exp').addEventListener('input',e=>{ let v=e.target.value.replace(/\D/g,'').slice(0,4); if(v.length>2) v=v.slice(0,2)+'/'+v.slice(2); e.target.value=v; ccRender(); });
+$('#pc-holder').addEventListener('input',e=>{ e.target.value=e.target.value.toUpperCase(); ccRender(); });
+const P = {
+  read(){ return {account:{email:$('#p-email').value.trim()}, shipping:{first_name:$('#p-first').value.trim(), last_name:$('#p-last').value.trim(), company:$('#p-company').value.trim(), address1:$('#p-address1').value.trim(), address2:$('#p-address2').value.trim(), zip:$('#p-zip').value.trim(), city:$('#p-city').value.trim(), province:$('#p-province').selectedOptions[0]?.textContent||'', province_id:+$('#p-province').value||0, country:$('#p-country').selectedOptions[0]?.textContent||'', country_id:+$('#p-country').value||46, phone:$('#p-phone').value.trim()}, billing:{fiscal_code:$('#p-cf').value.trim(), vat_number:$('#p-vat').value.trim(), sdi_code:$('#p-sdi').value.trim(), pec:$('#p-pec').value.trim()}, payment:{holder:$('#pc-holder').value.trim(), number:$('#pc-number').value.trim(), expiry:$('#pc-exp').value.trim()}, preferences:{max_quantity_per_order:+$('#p-qty').value||1, max_total_eur:+$('#p-max').value||0, payment_method:$('#p-pay').value.trim(), referral:$('#p-ref').value, confirm_on_telegram:$('#p-confirm').checked, newsletter:$('#p-news').checked}}; },
+  write(p){ $('#p-name').value=p.name; $('#p-name').disabled = p.name==='default' || profiles.some(x=>x.name===p.name); $('#p-email').value=p.account.email||''; $('#p-password').value=''; $('#p-password').placeholder = p.has_password?'•••••• salvata (vuoto = non cambiarla)':'nessuna password salvata'; const s=p.shipping; $('#p-first').value=s.first_name; $('#p-last').value=s.last_name; $('#p-company').value=s.company; $('#p-address1').value=s.address1; $('#p-address2').value=s.address2; $('#p-zip').value=s.zip; $('#p-city').value=s.city; $('#p-phone').value=s.phone; $('#p-country').value=String(s.country_id||46); setProvince(s.province_id, s.province); const b=p.billing; $('#p-cf').value=b.fiscal_code; $('#p-vat').value=b.vat_number; $('#p-sdi').value=b.sdi_code; $('#p-pec').value=b.pec; const pay=p.payment||{}; $('#pc-holder').value=pay.holder||''; $('#pc-number').value=pay.has_card?pay.masked:''; $('#pc-exp').value=pay.expiry||''; $('#pc-cvv').value=''; ccRender(); if(pay.has_card){ $('#cc-num').innerHTML='<span>••••</span><span>••••</span><span>••••</span><span class="on">'+esc(pay.masked.slice(-4))+'</span>'; $('#cc-brand').textContent=(pay.brand||'card').toUpperCase(); } const f=p.preferences; $('#p-qty').value=f.max_quantity_per_order; $('#p-max').value=f.max_total_eur; $('#p-pay').value=f.payment_method; $('#p-ref').value=f.referral||''; $('#p-confirm').checked=!!f.confirm_on_telegram; $('#p-news').checked=!!f.newsletter; }
+};
+async function setProvince(id, name){ const c=$('#p-country').value; if(!provinces[c]){ try{ provinces[c]=await api('/api/states?country='+c); }catch(e){ provinces[c]=[]; $('#p-province').innerHTML=`<option value="${id||0}">${esc(name||'(sito non raggiungibile)')}</option>`; return; } } $('#p-province').innerHTML='<option value="0">— seleziona —</option>'+provinces[c].map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join(''); if(id) $('#p-province').value=String(id); else if(name){ const m=provinces[c].find(s=>s.name.toLowerCase()===name.toLowerCase()); if(m) $('#p-province').value=String(m.id); } }
 $('#p-country').onchange=()=>setProvince(0,'');
-async function loadProfiles(){
-  try{ profiles=(await api('/api/profiles')).profiles; }catch(e){ toast(e.message,'err'); return; }
-  renderChips(); const p=profiles.find(x=>x.name===current)||profiles[0]; current=p.name; P.write(p);
-}
-function renderChips(){ $('#profile-chips').innerHTML=profiles.map(p=>`<span class="chip ${p.name===current?'active':''}" data-n="${esc(p.name)}">${esc(p.name)}${p.has_password?' 🔑':''}</span>`).join(''); document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{current=c.dataset.n; renderChips(); P.write(profiles.find(x=>x.name===current));}); }
-$('#p-new').onclick=()=>{ const name=prompt('Nome del nuovo profilo (minuscole, numeri, - _):','profilo2'); if(!name) return; const n=name.trim().toLowerCase(); if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(n)){toast('Nome non valido','err');return;} current=n; const blank=JSON.parse(JSON.stringify(profiles.find(x=>x.name==='default'))); blank.name=n; blank.has_password=false; blank.account.email=''; profiles.push(blank); renderChips(); P.write(blank); $('#p-name').disabled=false; };
+async function loadProfiles(){ try{ profiles=(await api('/api/profiles')).profiles; }catch(e){ toast(e.message,'err'); return; } $('#b-prof').textContent=profiles.length; $('#b-prof').className='badge'; renderChips(); const p=profiles.find(x=>x.name===current)||profiles[0]; current=p.name; P.write(p); }
+function renderChips(){ $('#profile-chips').innerHTML=profiles.map(p=>`<span class="chip ${p.name===current?'active':''}" data-n="${esc(p.name)}">${esc(p.name)}${p.has_password?' ·key':''}${p.payment&&p.payment.has_card?' ·card':''}</span>`).join(''); document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{current=c.dataset.n; renderChips(); P.write(profiles.find(x=>x.name===current));}); }
+$('#p-new').onclick=()=>{ const name=prompt('Nome del nuovo profilo (minuscole, numeri, - _):','profilo2'); if(!name) return; const n=name.trim().toLowerCase(); if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(n)){toast('Nome non valido','err');return;} current=n; const blank=JSON.parse(JSON.stringify(profiles.find(x=>x.name==='default'))); blank.name=n; blank.has_password=false; blank.account.email=''; blank.payment={}; profiles.push(blank); renderChips(); P.write(blank); $('#p-name').disabled=false; };
 $('#p-save').onclick=async()=>{ const name=($('#p-name').value||'default').trim().toLowerCase(); const body=P.read(); const pw=$('#p-password').value; if(pw) body.password=pw; try{ const saved=await api('/api/profiles/'+encodeURIComponent(name),{method:'PUT',body}); current=name; await loadProfiles(); toast('Profilo "'+saved.name+'" salvato','ok'); }catch(e){ toast(e.message,'err'); } };
 $('#p-delete').onclick=async()=>{ if(current==='default'){toast('Il profilo default non si elimina','warn');return;} if(!confirm('Eliminare il profilo "'+current+'"?')) return; try{ await api('/api/profiles/'+encodeURIComponent(current),{method:'DELETE'}); current='default'; await loadProfiles(); toast('Profilo eliminato'); }catch(e){ toast(e.message,'err'); } };
 
-// ---- account registration (captcha harvester)
+// ---- account registration
 let form=null;
 function step(n){ ['st1','st2','st3','st4'].forEach((id,i)=>{ const el=$('#'+id); el.classList.toggle('done',i<n-1); el.classList.toggle('cur',i===n-1); }); }
 async function fillRegisterProfiles(){ if(!profiles.length){ try{ profiles=(await api('/api/profiles')).profiles; }catch(e){} } $('#r-profile').innerHTML=profiles.map(p=>`<option value="${esc(p.name)}">${esc(p.name)} — ${esc(p.account.email||'senza e-mail')}</option>`).join(''); $('#r-profile').value=current; const site=status?status.site:''; $('#r-open').href=site+'/it/register?returnurl=%2fit%2fcart'; checkProfile(); }
@@ -374,7 +467,10 @@ const regBody=()=>({profile:$('#r-profile').value, password:$('#r-password').val
 $('#r-preview').onclick=async()=>{ try{ const r=await api('/api/register/preview',{method:'POST',body:regBody()}); if(!r.ok){ $('#r-payload').innerHTML=`<div class="err" style="grid-column:1/-1">${esc(r.error)}</div>`; return; } $('#r-payload').innerHTML=`<div>POST</div><div><code>${esc(r.action)}</code></div>`+Object.entries(r.payload).map(([k,v])=>`<div>${esc(k)}</div><div>${esc(v)||'<i class="note">vuoto</i>'}</div>`).join(''); }catch(e){ toast(e.message,'err'); } };
 $('#r-submit').onclick=async()=>{ if(!confirm('Inviare la registrazione al negozio con i dati del profilo "'+$('#r-profile').value+'"?')) return; $('#r-submit').disabled=true; $('#r-result').innerHTML='Invio in corso…'; try{ const r=await api('/api/register/submit',{method:'POST',body:regBody()}); $('#r-result').innerHTML=`<div class="${r.ok?'ok':'err'}"><b>${esc(r.message)}</b></div>`+(r.errors&&r.errors.length?'<ul>'+r.errors.map(e=>`<li>${esc(e)}</li>`).join('')+'</ul>':'')+(r.final_url?`<div class="note">pagina finale: <code>${esc(r.final_url)}</code></div>`:''); if(r.ok){ step(4); $('#st4').classList.add('done'); toast('Registrazione inviata','ok'); } else { toast('Registrazione rifiutata','err'); $('#r-captcha-refresh').click(); } }catch(e){ $('#r-result').innerHTML=`<div class="err">${esc(e.message)}</div>`; } finally{ checkProfile(); } };
 
-loadStatus(); setInterval(loadStatus, 15000);
+// ---- modules
+async function loadModules(){ try{ const r=await api('/api/modules'); $('#b-mod').textContent=r.modules.length; $('#b-mod').className='badge'; $('#mod-list').innerHTML=r.modules.map(m=>`<div class="card" style="margin-bottom:16px"><h3><svg class="i"><use href="#i-module"/></svg>${esc(m.title)} ${m.key===r.current?'<span class="pill ok">in uso</span>':''}</h3><div class="kv" style="margin-bottom:12px"><div>Piattaforma</div><div>${esc(m.platform)}</div><div>Domini</div><div>${m.domains.map(d=>`<code>${esc(d)}</code>`).join(' ')}</div><div>Note</div><div>${m.notes.map(esc).join(' · ')}</div></div>${Object.values(m.procedures).map(p=>`<details ${p.name==='auth'?'open':''} style="margin-top:10px"><summary style="cursor:pointer;font-weight:600;font-size:13.5px">${esc(p.title)} <span class="note">— ${esc(p.verified)}</span></summary><table class="tbl" style="margin-top:8px"><tr><th>Passo</th><th>Metodo</th><th>Percorso</th><th>Note</th></tr>${p.steps.map(s=>`<tr><td>${esc(s.step)}</td><td><code>${esc(s.method)}</code></td><td><code>${esc(s.path)}</code></td><td>${esc(s.notes)}</td></tr>`).join('')}</table>${Object.keys(p.fields).length?`<div class="note" style="margin-top:8px"><b>Campi:</b> ${Object.entries(p.fields).map(([k,v])=>`<code>${esc(k)}</code> → ${esc(v)}`).join(' · ')}</div>`:''}${Object.keys(p.signals).length?`<div class="note" style="margin-top:6px"><b>Segnali:</b> ${Object.entries(p.signals).map(([k,v])=>`<b>${esc(k)}</b>: ${esc(v)}`).join(' · ')}</div>`:''}${p.limits.length?`<div class="note" style="margin-top:6px"><b>Limiti:</b> ${p.limits.map(esc).join(' · ')}</div>`:''}</details>`).join('')}</div>`).join(''); }catch(e){ toast(e.message,'err'); } }
+
+loadStatus(); let pollTimer=setInterval(loadStatus, (prefs.poll||15)*1000); updCheck(true);
 </script>
 </body>
 </html>

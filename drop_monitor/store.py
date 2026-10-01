@@ -179,6 +179,11 @@ class Store:
             )
             self._conn.commit()
 
+    def count_orders(self, task: str, statuses=("placed", "pending_payment")) -> int:
+        with self._lock:
+            q = ",".join("?" * len(statuses))
+            return int(self._conn.execute(f"SELECT COUNT(*) FROM orders WHERE task = ? AND status IN ({q})", (task, *statuses)).fetchone()[0])
+
     def recent_orders(self, limit: int = 20) -> list[dict]:
         with self._lock:
             rows = self._conn.execute("SELECT * FROM orders ORDER BY id DESC LIMIT ?", (limit,)).fetchall()

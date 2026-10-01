@@ -22,6 +22,7 @@ DEFAULT_PROFILE: dict[str, Any] = {
         "zip": "", "city": "", "province": "", "province_id": 0, "country": "Italia", "country_id": 46, "phone": "",
     },
     "billing": {"same_as_shipping": True, "fiscal_code": "", "vat_number": "", "sdi_code": "", "pec": ""},
+    "payment": {"holder": "", "number": "", "expiry": "", "brand": ""},  # number encrypted at rest (vault), CVV never stored
     "preferences": {
         "max_quantity_per_order": 1, "max_total_eur": 150, "shipping_method": "", "payment_method": "",
         "confirm_on_telegram": True, "newsletter": False, "referral": "",
@@ -88,14 +89,40 @@ class ProfileStore:
                 pw = os.environ.get("ORDER_PASSWORD", "")
         merged["account"]["password"] = pw
         merged["name"] = name
+        pay = merged.get("payment") or {}
+        pay["number_enc"] = pay.get("number", "")
+        pay["number"] = ""  # decrypted only on demand (card_number())
+        merged["payment"] = pay
         return merged
 
+    def card_number(self, name: str = "default") -> str:
+        """Decrypted card number (for the checkout step only)."""
+        from drop_monitor.vault import decrypt
+
+        return decrypt(self.load(name).get("payment", {}).get("number_enc", ""), self.env_file)
+
     def save(self, name: str, data: dict, password: str | None = None) -> dict:
+        from drop_monitor.vault import card_brand, encrypt
+
         p = self.path(name)
         p.parent.mkdir(parents=True, exist_ok=True)
         data = dict(data)
         data.pop("name", None)
         data.pop("has_password", None)
+        pay = dict(data.get("payment") or {})
+        pay.pop("cvv", None)  # never stored
+        pay.pop("masked", None)
+        existing = self.load(name).get("payment", {}) if p.is_file() else {}
+        number = str(pay.get("number") or "")
+        if number and not number.startswith("enc:") and "•" not in number:
+            pay["brand"] = card_brand(number)
+            pay["number"] = encrypt(re.sub(r"\s", "", number), self.env_file)
+        else:
+            pay["number"] = existing.get("number_enc", "") if ("•" in number or not number) else number
+            pay["brand"] = existing.get("brand", "") if not pay.get("brand") else pay["brand"]
+        if pay.get("holder") is None:
+            pay["holder"] = existing.get("holder", "")
+        data["payment"] = pay
         merged = _merge(DEFAULT_PROFILE, data)
         merged["account"] = {k: v for k, v in merged["account"].items() if k not in ("password", "has_password", "save_password")}
         header = (
@@ -115,9 +142,15 @@ class ProfileStore:
             p.unlink()
 
     def public(self, name: str = "default") -> dict:
+        from drop_monitor.vault import mask_card
+
         prof = self.load(name)
         prof["has_password"] = bool(prof["account"].get("password"))
         prof["account"]["password"] = ""
+        pay = prof.get("payment") or {}
+        number = self.card_number(name) if pay.get("number_enc") else ""
+        prof["payment"] = {"holder": pay.get("holder", ""), "expiry": pay.get("expiry", ""), "brand": pay.get("brand", ""),
+                           "masked": mask_card(number), "has_card": bool(number), "number": ""}
         return prof
 
 

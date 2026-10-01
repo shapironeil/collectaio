@@ -40,6 +40,8 @@ class MonitorController:
         self.dry_run = False
         self.last_error: str | None = None
         self._lock = threading.Lock()
+        self.scheduled_at: str | None = None
+        self._timer: threading.Timer | None = None
 
     @property
     def running(self) -> bool:
@@ -105,6 +107,26 @@ class MonitorController:
         self.stop()
         return self.start(self.dry_run if dry_run is None else dry_run)
 
+    def schedule(self, when_iso: str | None, dry_run: bool = False) -> dict:
+        """Start the monitor at a given local time (drop time). None cancels."""
+        from datetime import datetime
+
+        if self._timer:
+            self._timer.cancel()
+            self._timer = None
+        self.scheduled_at = None
+        if when_iso:
+            when = datetime.fromisoformat(when_iso)
+            delay = (when - datetime.now()).total_seconds()
+            if delay <= 0:
+                return self.start(dry_run)
+            self.scheduled_at = when.isoformat(timespec="minutes")
+            self._timer = threading.Timer(delay, lambda: (setattr(self, "scheduled_at", None), self.start(dry_run)))
+            self._timer.daemon = True
+            self._timer.start()
+            log.info("monitor scheduled at %s (in %.0fs)", self.scheduled_at, delay)
+        return self.status()
+
     def status(self) -> dict:
         info = self.monitor.info() if self.monitor else {}
-        return {"running": self.running, "dry_run": self.dry_run, "last_error": self.last_error, **info}
+        return {"running": self.running, "dry_run": self.dry_run, "last_error": self.last_error, "scheduled_at": self.scheduled_at, **info}

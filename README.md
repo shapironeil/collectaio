@@ -108,6 +108,25 @@ per il monitor, `sticky` un proxy per profilo negli ordini), Telegram (token, ch
 notifiche prezzo. In **Tasks** si aggiungono prodotti e task di acquisto. Il salvataggio valida e scrive `config.yaml`,
 i segreti vanno in `.env`; "Riavvia" applica. Il setup Windows apre la finestra a fine installazione.
 
+### Avvio quotidiano: `avvia.bat`
+
+Dopo il setup basta `avvia.bat` (accanto a `setup-windows.bat` o dentro `drop-monitor\`): apre la finestra con il
+monitor integrato già in esecuzione, senza alcun controllo di installazione. Gli aggiornamenti si fanno da
+**Impostazioni → Aggiornamenti** (controlla il branch su GitHub, scarica, sostituisce solo i file del programma,
+aggiorna le dipendenze, riavvia). Il setup resta per la prima installazione o per rifare i runtime portable.
+
+### La finestra
+
+Tema scuro grigio/verde, icone vettoriali, barra laterale riducibile con contatori. Sezioni: **Dashboard**,
+**Tasks** (quick task da URL, prodotti, task con spesa massima e max checkouts), **Profili** (account, spedizione,
+fatturazione, carta 3D con numero cifrato e CVV mai salvato, preferenze), **Account** (registrazione assistita con
+captcha), **Moduli** (procedure studiate per sito e generatore account in teoria), **Imparo** (glossario: dry-run e
+run, monitor, task, proxy, notifiche), **Impostazioni** (aggiornamenti, monitor, proxy, notifiche, preferenze).
+In alto: Avvia, Dry-run, Stop e avvio programmato all'orario del drop.
+
+**Dry-run** = prova a secco: tutto come vero ma senza l'azione irreversibile (niente notifiche nel monitor, niente
+conferma dell'ordine). **Run** = esecuzione reale.
+
 ## Comandi
 
 | comando | cosa fa |

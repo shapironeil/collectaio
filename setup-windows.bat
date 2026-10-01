@@ -328,6 +328,7 @@ if exist "%BACKUP_DIR%" (
         if exist "%BACKUP_DIR%\%%d" robocopy "%BACKUP_DIR%\%%d" "%INSTALL_DIR%\%%d" /E /XC /XN /XO /R:1 /W:1 /NFL /NDL /NJH /NJS /NP >nul
     )
 )
+if exist "%INSTALL_DIR%\avvia.bat" copy /y "%INSTALL_DIR%\avvia.bat" "%SELF_DIR%\avvia.bat" >nul
 > "%INSTALL_DIR%\install-info.txt" (
     echo installed_at=%DATE% %TIME%
     echo branch=%BRANCH%
@@ -370,15 +371,15 @@ echo   2. (opzionale) adatta config.yaml: prodotti, intervallo, sorgenti
 echo   3. compila personal\order-profile.yaml con i dati per gli ordini (fase 2)
 echo   4. windows\test.bat    - prova senza inviare notifiche
 echo   5. windows\start.bat   - avvia il monitor
-echo   6. windows\app.bat     - finestra di controllo con monitor integrato: da li' imposti
-echo                           intervalli, proxy, Telegram/Discord, prodotti, task, profili
+echo   6. avvia.bat           - da oggi basta questo: apre la finestra con il monitor
+echo                           integrato (impostazioni, profili, task, aggiornamenti)
 echo.
 echo  Per aggiornare in futuro: rilancia questo stesso file. I file personali
 echo  vengono preservati e copiati anche in _backup\ (ultimi 5 backup).
 echo ============================================================================
 echo.
-choice /c SN /n /t 20 /d S /m " Aprire adesso la finestra di controllo (windows\app.bat)? [S/N, S fra 20s] "
-if not errorlevel 2 start "" "%INSTALL_DIR%\windows\app.bat"
+choice /c SN /n /t 20 /d S /m " Aprire adesso la finestra di controllo (avvia.bat)? [S/N, S fra 20s] "
+if not errorlevel 2 start "" "%INSTALL_DIR%\avvia.bat"
 goto :end
 
 rem ============================ FUNZIONI =====================================

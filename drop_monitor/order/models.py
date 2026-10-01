@@ -19,6 +19,7 @@ class Task:
     shipping_method: str = ""  # substring of the option label; empty = first offered
     payment_method: str = ""  # substring of the option label/system name; empty = first offered
     enabled: bool = True
+    max_checkouts: int = 0  # stop after N placed/pending orders for this task (0 = no cap)
 
 
 @dataclass

@@ -25,8 +25,13 @@ class DiscordWebhook:
         self._client = httpx.Client(timeout=httpx.Timeout(timeout))
 
     def send(self, text: str, **_) -> bool:
+        payload = {"username": "collectaio", "content": html_to_discord(text)[:1900]}
+        link = re.search(r'href="([^"]+)"', text)
+        if link and "<b>" in text:
+            first = html_to_discord(text.split("\n", 1)[0])
+            payload = {"username": "collectaio", "embeds": [{"title": first[:250], "url": link.group(1), "description": html_to_discord(text)[:1800], "color": 0x00FF7F}]}
         try:
-            r = self._client.post(self.url, json={"content": html_to_discord(text)[:1900], "username": "drop-monitor"})
+            r = self._client.post(self.url, json=payload)
             if r.status_code >= 300:
                 log.error("discord webhook failed: HTTP %s %s", r.status_code, r.text[:200])
                 return False

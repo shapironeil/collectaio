@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import webbrowser
 from http import HTTPStatus
@@ -29,7 +30,8 @@ from urllib.parse import parse_qs, unquote, urlsplit
 from drop_monitor import __version__
 from drop_monitor.account import AccountClient, AccountError, build_registration_payload
 from drop_monitor.config import Config, ConfigError
-from drop_monitor.config_edit import public_config, save_config
+from drop_monitor.config_edit import public_config, read_raw, save_config
+from drop_monitor.sites import all_modules, module_for
 from drop_monitor.health import check_health
 from drop_monitor.profile import ProfileStore
 from drop_monitor.store import Store
@@ -97,10 +99,76 @@ class UIState:
             out["monitor_running"] = self.controller.running
         return out
 
+    def modules(self) -> dict:
+        cur = module_for(self.site)
+        return {"modules": [m.to_dict() for m in all_modules()], "current": cur.key if cur else None}
+
+    def quick_task(self, body: dict) -> dict:
+        """Paste a product URL: fetch it, read the title, add product + task to config.yaml."""
+        from drop_monitor.fetcher import Fetcher
+        from drop_monitor.parsers import parse
+
+        url = (body.get("url") or "").strip()
+        if not url.startswith("http"):
+            raise AccountError("incolla l'URL completo della pagina prodotto")
+        f = Fetcher(self.cfg.polling.user_agent, self.cfg.polling.timeout_seconds, respect_robots=self.cfg.polling.respect_robots)
+        try:
+            res = parse(f.fetch(url), hint="product")
+        finally:
+            f.close()
+        if not res.products:
+            raise AccountError("nessun prodotto riconosciuto a quell'URL")
+        prod = res.products[0]
+        raw = read_raw(self.cfg.path)
+        products = list(raw.get("products") or [])
+        name = body.get("name") or prod.title
+        if not any((p.get("url") if isinstance(p, dict) else "") == prod.url for p in products):
+            products.append({"keywords": prod.title, "name": name, "url": prod.url})
+        tasks = list(raw.get("tasks") or [])
+        task = {"name": body.get("task_name") or re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:30], "product": name,
+                "profiles": body.get("profiles") or ["default"], "quantity": int(body.get("quantity") or 1),
+                "mode": body.get("mode") or "monitor", "max_total_eur": float(body.get("max_total_eur") or 150)}
+        tasks = [t for t in tasks if t.get("name") != task["name"]] + [task]
+        out = save_config(self.cfg.path, {"products": products, "tasks": tasks}, self.profiles.env_file)
+        if self.controller is not None:
+            self.controller.reload()
+            self.cfg = self.controller.cfg
+        return {"product": {"title": prod.title, "url": prod.url, "price": prod.price, "availability": prod.availability.value, "id": prod.product_id}, "task": task, "config": out}
+
+    def update_check(self) -> dict:
+        from drop_monitor.updater import Updater
+
+        u = Updater()
+        try:
+            return u.check()
+        finally:
+            u.close()
+
+    def update_apply(self) -> dict:
+        from drop_monitor.updater import Updater
+
+        if self.controller is not None and self.controller.running:
+            self.controller.stop()
+        u = Updater()
+        try:
+            return u.apply()
+        finally:
+            u.close()
+
+    def restart(self) -> dict:
+        from drop_monitor.updater import restart_app
+
+        if self.controller is not None and self.controller.running:
+            self.controller.stop()
+        threading.Timer(0.8, restart_app).start()
+        return {"ok": True, "message": "riavvio in corso"}
+
     def monitor_action(self, action: str, body: dict) -> dict:
         if self.controller is None:
             raise AccountError("monitor non controllabile da qui: avvia con `drop-monitor app` (windows\\app.bat)")
         dry = bool(body.get("dry_run", False))
+        if action == "schedule":
+            return self.controller.schedule(body.get("at") or None, dry)
         if action == "start":
             return self.controller.start(dry)
         if action == "stop":
@@ -231,6 +299,10 @@ def make_handler(state: UIState):
                     self._json(state.list_profiles())
                 elif path == "/api/config":
                     self._json(state.get_config())
+                elif path == "/api/modules":
+                    self._json(state.modules())
+                elif path == "/api/update/check":
+                    self._json(state.update_check())
                 elif path == "/api/register/captcha":
                     data, ctype = state.register_captcha()
                     self._bytes(data, ctype)
@@ -261,6 +333,12 @@ def make_handler(state: UIState):
             try:
                 if path == "/api/config":
                     self._json(state.put_config(body))
+                elif path == "/api/quick-task":
+                    self._json(state.quick_task(body))
+                elif path == "/api/update/apply":
+                    self._json(state.update_apply())
+                elif path == "/api/restart":
+                    self._json(state.restart())
                 elif path.startswith("/api/monitor/"):
                     self._json(state.monitor_action(path.rsplit("/", 1)[1], body))
                 elif path.startswith("/api/profiles/"):
