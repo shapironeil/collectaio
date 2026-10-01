@@ -100,6 +100,14 @@ con sidebar come i bot AIO, pensata per diventare il pannello unico di monitor e
 Il server ascolta solo su `127.0.0.1` e rifiuta richieste da altre origini. Nessun captcha viene risolto in automatico.
 Lo studio completo del modulo di registrazione (campi, token, province, esiti) è in [`docs/site-analysis.md`](docs/site-analysis.md#registrazione-account-itregisterreturnurl2fit2fcart).
 
+### Tutto dalla finestra (`drop-monitor app`, su Windows `windows\app.bat`)
+
+Monitor e finestra nello stesso processo, come un bot AIO: pulsanti **Avvia / Dry-run / Stop** in alto, e in
+**Impostazioni** si modificano intervalli, hot ratio, timeout, backoff, User-Agent, sorgenti, proxy (`off`, `rotate`
+per il monitor, `sticky` un proxy per profilo negli ordini), Telegram (token, chat id, comandi), Discord webhook,
+notifiche prezzo. In **Tasks** si aggiungono prodotti e task di acquisto. Il salvataggio valida e scrive `config.yaml`,
+i segreti vanno in `.env`; "Riavvia" applica. Il setup Windows apre la finestra a fine installazione.
+
 ## Comandi
 
 | comando | cosa fa |
@@ -107,7 +115,8 @@ Lo studio completo del modulo di registrazione (campi, token, province, esiti) �
 | `drop-monitor run [--dry-run]` | loop infinito; `--dry-run` logga le notifiche invece di inviarle |
 | `drop-monitor once [--dry-run] [--delay 3]` | una scansione completa (ogni sorgente + ogni pagina prodotto una volta), stampa stato ed esce. Ideale per i test |
 | `drop-monitor probe URL [--type …] [--file saved.html]` | scarica (o legge da file) e mostra cosa vede il parser e quali prodotti matchano |
-| `drop-monitor ui [--port 8765] [--no-browser]` | finestra di controllo locale |
+| `drop-monitor app [--autostart]` | finestra + monitor integrato, controllabile dalla finestra |
+| `drop-monitor ui [--port 8765] [--no-browser]` | sola finestra (monitor avviato a parte con `run`) |
 | `drop-monitor order --task NOME [--profile P] [--live] [--probe]` | checkout di un task (dry-run senza `--live`) |
 | `drop-monitor login --profile P` | prova il login del profilo sul negozio |
 | `drop-monitor orders` | storico ordini |

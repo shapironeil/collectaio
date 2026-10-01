@@ -62,6 +62,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("orders", help="print the order history")
 
+    app = sub.add_parser("app", help="window + monitor in one process, controllable from the window (AIO mode)")
+    app.add_argument("--port", type=int, default=8765)
+    app.add_argument("--host", default="127.0.0.1")
+    app.add_argument("--no-browser", action="store_true")
+    app.add_argument("--autostart", action="store_true", help="start the monitor immediately")
+
     sub.add_parser("status", help="print the tracked state from the database")
     sub.add_parser("healthcheck", help="exit 0 if the monitor heartbeat is fresh")
     sub.add_parser("test-telegram", help="send a test message to the configured chat")
@@ -75,18 +81,25 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as e:
         print(f"config error: {e}", file=sys.stderr)
         return 2
-    setup_logging(cfg.storage.log_path if args.cmd in ("run", "once", "ui") else None, cfg.storage.log_level)
+    setup_logging(cfg.storage.log_path if args.cmd in ("run", "once", "ui", "app") else None, cfg.storage.log_level)
 
     if args.cmd == "healthcheck":
         ok, msg = check_health(cfg.storage.health_path, cfg.storage.health_max_age_seconds)
         print(msg)
         return 0 if ok else 1
 
-    if args.cmd == "ui":
+    if args.cmd in ("ui", "app"):
         from drop_monitor.ui.server import serve
 
         store = Store(cfg.storage.db_path)
-        httpd = serve(cfg, store, host=args.host, port=args.port, open_browser=not args.no_browser)
+        controller = None
+        if args.cmd == "app":
+            from drop_monitor.app import MonitorController
+
+            controller = MonitorController(args.config, store)
+            if args.autostart:
+                controller.start()
+        httpd = serve(cfg, store, host=args.host, port=args.port, open_browser=not args.no_browser, controller=controller)
         print(f"drop-monitor window: http://{args.host}:{httpd.server_address[1]}/  (Ctrl+C per chiudere)")
         try:
             httpd.serve_forever()
@@ -123,7 +136,8 @@ def main(argv: list[str] | None = None) -> int:
         print("sent" if ok else "FAILED (see log)")
         return 0 if ok else 1
 
-    fetcher = Fetcher(cfg.polling.user_agent, cfg.polling.timeout_seconds, cfg.polling.accept_language, cfg.polling.respect_robots)
+    fetcher = Fetcher(cfg.polling.user_agent, cfg.polling.timeout_seconds, cfg.polling.accept_language, cfg.polling.respect_robots,
+                      proxies=cfg.network.proxies, proxy_mode=cfg.network.proxy_mode)
 
     if args.cmd == "probe":
         if args.file:
@@ -145,7 +159,10 @@ def main(argv: list[str] | None = None) -> int:
 
     store = Store(cfg.storage.db_path)
     dry = bool(getattr(args, "dry_run", False))
-    tg = Telegram(cfg.telegram.bot_token, cfg.telegram.chat_id) if cfg.telegram.enabled and not dry else None
+    from drop_monitor.notify import build_notifier
+
+    notifier = build_notifier(cfg) if not dry else None
+    tg = notifier.telegram if notifier else None
     order_runner = None
     confirmer = None
     if any(t.mode == "auto_checkout" and t.enabled for t in cfg.tasks):
@@ -159,8 +176,9 @@ def main(argv: list[str] | None = None) -> int:
         base = Path(cfg.path).parent if cfg.path else Path(".")
         confirmer = TelegramConfirmer(tg) if tg else None
         order_runner = OrderRunner(_site_base(cfg), cfg.polling.user_agent, ProfileStore(base / "personal", base / ".env"), store,
-                                   confirmer=confirmer, notify=(tg.send if tg else None), sessions_dir=base / "personal" / "sessions")
-    monitor = Monitor(cfg, store, fetcher, tg, dry_run=dry, order_runner=order_runner)
+                                   confirmer=confirmer, notify=(notifier.send if notifier else None), sessions_dir=base / "personal" / "sessions",
+                                   proxies=cfg.network.proxies if cfg.network.proxy_mode == "sticky" else None)
+    monitor = Monitor(cfg, store, fetcher, notifier, dry_run=dry, order_runner=order_runner)
 
     if args.cmd == "once":
         results = monitor.run_once(delay=args.delay)

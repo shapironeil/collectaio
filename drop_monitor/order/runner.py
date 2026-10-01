@@ -44,8 +44,9 @@ class Prober:
 
 
 class OrderRunner:
-    def __init__(self, base_url: str, user_agent: str, profiles, store, confirmer: Confirmer | None = None, notify=None, sessions_dir="personal/sessions", probe_dir: str | None = None):
+    def __init__(self, base_url: str, user_agent: str, profiles, store, confirmer: Confirmer | None = None, notify=None, sessions_dir="personal/sessions", probe_dir: str | None = None, proxies: list[str] | None = None):
         self.base_url = base_url
+        self.proxies = list(proxies or [])  # sticky: profile i uses proxy i (mod len)
         self.ua = user_agent
         self.profiles = profiles  # ProfileStore
         self.store = store
@@ -89,7 +90,12 @@ class OrderRunner:
         except Exception as e:
             res.message = f"profilo non caricabile: {e}"
             return res
-        session = ShopSession(self.base_url, profile, self.ua, self.sessions_dir, probe=prober)
+        proxy = None
+        if self.proxies:
+            idx = task.profiles.index(profile_name) if profile_name in task.profiles else 0
+            proxy = self.proxies[idx % len(self.proxies)]
+            res.log("proxy", True, proxy.split("@")[-1])
+        session = ShopSession(self.base_url, profile, self.ua, self.sessions_dir, probe=prober, proxy=proxy)
         try:
             self._flow(task, profile, session, product_id, product_title, dry_run, res)
         except (LoginError, CartError, CheckoutError) as e:

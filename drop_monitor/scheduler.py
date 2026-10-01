@@ -297,7 +297,7 @@ class Monitor:
             ).start()
 
     def _notify(self, text: str) -> None:
-        if self.dry_run or self.tg is None:
+        if self.dry_run or self.tg is None or not getattr(self.tg, "enabled", True):
             log.info("[notify%s] %s", " dry-run" if self.dry_run else " disabled", text.replace("\n", " | "))
             return
         self.tg.send(text)

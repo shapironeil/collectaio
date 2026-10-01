@@ -92,29 +92,42 @@ class RobotsCache:
 
 
 class Fetcher:
-    def __init__(self, user_agent: str, timeout: float = 20, accept_language: str = "it-IT,it;q=0.9,en;q=0.5", respect_robots: bool = True):
+    def __init__(self, user_agent: str, timeout: float = 20, accept_language: str = "it-IT,it;q=0.9,en;q=0.5", respect_robots: bool = True,
+                 proxies: list[str] | None = None, proxy_mode: str = "off"):
         self.user_agent = user_agent
-        self._client = httpx.Client(
-            headers={
-                "User-Agent": user_agent,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,application/json;q=0.8,*/*;q=0.5",
-                "Accept-Language": accept_language,
-            },
-            timeout=httpx.Timeout(timeout),
-            follow_redirects=True,
-        )
+        headers = {
+            "User-Agent": user_agent,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,application/json;q=0.8,*/*;q=0.5",
+            "Accept-Language": accept_language,
+        }
+        proxy_list = list(proxies or []) if proxy_mode != "off" else []
+        self._clients = [
+            httpx.Client(headers=headers, timeout=httpx.Timeout(timeout), follow_redirects=True, proxy=px)
+            for px in (proxy_list or [None])
+        ]
+        self.proxies = proxy_list
+        self._rr = 0
+        self._client = self._clients[0]
         self.respect_robots = respect_robots
         self.robots = RobotsCache(self._client, user_agent)
 
+    def _next_client(self) -> httpx.Client:
+        if len(self._clients) == 1:
+            return self._clients[0]
+        c = self._clients[self._rr % len(self._clients)]
+        self._rr += 1
+        return c
+
     def close(self) -> None:
-        self._client.close()
+        for c in self._clients:
+            c.close()
 
     def fetch(self, url: str) -> FetchResult:
         if self.respect_robots and not self.robots.allowed(url):
             raise RobotsDisallowed(f"robots.txt disallows {url} for '{self.user_agent}'")
         t0 = time.monotonic()
         try:
-            r = self._client.get(url)
+            r = self._next_client().get(url)
         except httpx.HTTPError as e:
             raise FetchError(f"{type(e).__name__}: {e}", status=None, url=url) from e
         elapsed = time.monotonic() - t0

@@ -2,7 +2,9 @@
 
 Routes
   GET  /                          the window
-  GET  /api/status                monitor state (SQLite + heartbeat)
+  GET  /api/status                monitor state (SQLite + heartbeat + in-process controller)
+  GET  /api/config                editable config (secrets masked)      PUT /api/config  save + validate
+  POST /api/monitor/start|stop|restart   {"dry_run": false}  (only in `drop-monitor app` mode)
   GET  /api/profiles              list of buyer profiles (passwords masked)
   PUT  /api/profiles/<name>       save a profile; body may carry "password" (stored in .env, never in YAML)
   DELETE /api/profiles/<name>     remove a profile
@@ -26,7 +28,8 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 from drop_monitor import __version__
 from drop_monitor.account import AccountClient, AccountError, build_registration_payload
-from drop_monitor.config import Config
+from drop_monitor.config import Config, ConfigError
+from drop_monitor.config_edit import public_config, save_config
 from drop_monitor.health import check_health
 from drop_monitor.profile import ProfileStore
 from drop_monitor.store import Store
@@ -42,9 +45,10 @@ FAVICON = (
 
 
 class UIState:
-    def __init__(self, cfg: Config, store: Store):
+    def __init__(self, cfg: Config, store: Store, controller=None):
         self.cfg = cfg
         self.store = store
+        self.controller = controller  # MonitorController in app mode
         base = Path(cfg.path).parent if cfg.path else Path(".")
         self.profiles = ProfileStore(base / "personal", base / ".env")
         self.site = _site_base(cfg)
@@ -58,8 +62,11 @@ class UIState:
 
     # ---- handlers -------------------------------------------------------
     def status(self) -> dict:
+        if self.controller is not None:
+            self.cfg = self.controller.cfg
         ok, msg = check_health(self.cfg.storage.health_path, self.cfg.storage.health_max_age_seconds)
         return {
+            "controller": self.controller.status() if self.controller else None,
             "version": __version__,
             "site": self.site,
             "health": {"ok": ok, "message": msg},
@@ -78,6 +85,29 @@ class UIState:
             "seen": self.store.seen_count(),
             "telegram": {"enabled": self.cfg.telegram.enabled, "chat_id": self.cfg.telegram.chat_id[-4:].rjust(len(self.cfg.telegram.chat_id), "*") if self.cfg.telegram.chat_id else ""},
         }
+
+    def get_config(self) -> dict:
+        return public_config(self.cfg.path)
+
+    def put_config(self, body: dict) -> dict:
+        out = save_config(self.cfg.path, body, self.profiles.env_file)
+        if self.controller is not None:
+            self.controller.reload()
+            self.cfg = self.controller.cfg
+            out["monitor_running"] = self.controller.running
+        return out
+
+    def monitor_action(self, action: str, body: dict) -> dict:
+        if self.controller is None:
+            raise AccountError("monitor non controllabile da qui: avvia con `drop-monitor app` (windows\\app.bat)")
+        dry = bool(body.get("dry_run", False))
+        if action == "start":
+            return self.controller.start(dry)
+        if action == "stop":
+            return self.controller.stop()
+        if action == "restart":
+            return self.controller.restart(dry if "dry_run" in body else None)
+        raise AccountError("azione sconosciuta")
 
     def list_profiles(self) -> dict:
         return {"profiles": [self.profiles.public(n) for n in self.profiles.names()]}
@@ -199,6 +229,8 @@ def make_handler(state: UIState):
                     self._json(state.status())
                 elif path == "/api/profiles":
                     self._json(state.list_profiles())
+                elif path == "/api/config":
+                    self._json(state.get_config())
                 elif path == "/api/register/captcha":
                     data, ctype = state.register_captcha()
                     self._bytes(data, ctype)
@@ -227,7 +259,11 @@ def make_handler(state: UIState):
             path = urlsplit(self.path).path
             body = self._body()
             try:
-                if path.startswith("/api/profiles/"):
+                if path == "/api/config":
+                    self._json(state.put_config(body))
+                elif path.startswith("/api/monitor/"):
+                    self._json(state.monitor_action(path.rsplit("/", 1)[1], body))
+                elif path.startswith("/api/profiles/"):
                     name = unquote(path.rsplit("/", 1)[1])
                     self._json(state.delete_profile(name) if self.command == "DELETE" else state.put_profile(name, body))
                 elif path == "/api/register/start":
@@ -240,7 +276,7 @@ def make_handler(state: UIState):
                     self._json(state.register_submit(body))
                 else:
                     self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
-            except (AccountError, ValueError) as e:
+            except (AccountError, ValueError, ConfigError) as e:
                 self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             except Exception as e:
                 log.exception("ui %s failed", path)
@@ -249,8 +285,8 @@ def make_handler(state: UIState):
     return Handler
 
 
-def serve(cfg: Config, store: Store, host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True) -> ThreadingHTTPServer:
-    state = UIState(cfg, store)
+def serve(cfg: Config, store: Store, host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True, controller=None) -> ThreadingHTTPServer:
+    state = UIState(cfg, store, controller=controller)
     httpd = ThreadingHTTPServer((host, port), make_handler(state))
     url = f"http://{host}:{httpd.server_address[1]}/"
     log.info("drop-monitor window at %s", url)

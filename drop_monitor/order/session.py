@@ -20,7 +20,7 @@ class LoginError(Exception):
 
 
 class ShopSession:
-    def __init__(self, base_url: str, profile: dict, user_agent: str, sessions_dir: str | Path, timeout: float = 25, probe=None):
+    def __init__(self, base_url: str, profile: dict, user_agent: str, sessions_dir: str | Path, timeout: float = 25, probe=None, proxy: str | None = None):
         self.base_url = base_url.rstrip("/")
         self.profile = profile
         self.name = profile.get("name", "default")
@@ -34,7 +34,9 @@ class ShopSession:
             },
             timeout=httpx.Timeout(timeout),
             follow_redirects=True,
+            proxy=proxy or None,
         )
+        self.proxy = proxy
         self._load_cookies()
 
     # ---- cookies ---------------------------------------------------------

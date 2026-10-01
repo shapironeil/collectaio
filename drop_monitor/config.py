@@ -57,7 +57,14 @@ class TelegramConfig:
 class NotifyConfig:
     on_price_change: bool = False
     startup_message: bool = True
-    error_after_consecutive: int = 10  # warn on Telegram after N consecutive fetch errors (0 = never)
+    error_after_consecutive: int = 10  # warn after N consecutive fetch errors (0 = never)
+    discord_webhook_url: str = ""  # optional Discord webhook (notifications only; confirmations stay on Telegram)
+
+
+@dataclass
+class NetworkConfig:
+    proxies: list[str] = field(default_factory=list)  # http://user:pass@host:port or socks5://...
+    proxy_mode: str = "off"  # off | rotate (monitor: one proxy per request) | sticky (one proxy per buyer profile)
 
 
 @dataclass
@@ -78,6 +85,7 @@ class Config:
     polling: PollingConfig = field(default_factory=PollingConfig)
     telegram: TelegramConfig = field(default_factory=TelegramConfig)
     notify: NotifyConfig = field(default_factory=NotifyConfig)
+    network: NetworkConfig = field(default_factory=NetworkConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     path: str | None = None
 
@@ -194,6 +202,13 @@ def parse_config(raw: dict, path: str | None = None) -> Config:
     telegram.chat_id = str(telegram.chat_id or "")
     if telegram.enabled and (not telegram.bot_token or not telegram.chat_id):
         raise ConfigError("telegram.bot_token and telegram.chat_id are required (or set telegram.enabled: false)")
+    network = _build(NetworkConfig, raw.get("network"), "network")
+    if network.proxy_mode not in ("off", "rotate", "sticky"):
+        raise ConfigError("network.proxy_mode must be off, rotate or sticky")
+    network.proxies = [str(x).strip() for x in (network.proxies or []) if str(x).strip()]
+    for px in network.proxies:
+        if not px.startswith(("http://", "https://", "socks5://", "socks5h://")):
+            raise ConfigError(f"network.proxies: '{px}' must start with http://, https:// or socks5://")
 
     tasks: list[Task] = []
     labels = {w.label for w in watches} | {w.keywords for w in watches}
@@ -217,6 +232,7 @@ def parse_config(raw: dict, path: str | None = None) -> Config:
         polling=polling,
         telegram=telegram,
         notify=_build(NotifyConfig, raw.get("notify"), "notify"),
+        network=network,
         storage=_build(StorageConfig, raw.get("storage"), "storage"),
         path=path,
     )

@@ -370,11 +370,15 @@ echo   2. (opzionale) adatta config.yaml: prodotti, intervallo, sorgenti
 echo   3. compila personal\order-profile.yaml con i dati per gli ordini (fase 2)
 echo   4. windows\test.bat    - prova senza inviare notifiche
 echo   5. windows\start.bat   - avvia il monitor
-echo   6. windows\ui.bat      - finestra di controllo (profili, registrazione account)
+echo   6. windows\app.bat     - finestra di controllo con monitor integrato: da li' imposti
+echo                           intervalli, proxy, Telegram/Discord, prodotti, task, profili
 echo.
 echo  Per aggiornare in futuro: rilancia questo stesso file. I file personali
 echo  vengono preservati e copiati anche in _backup\ (ultimi 5 backup).
 echo ============================================================================
+echo.
+choice /c SN /n /t 20 /d S /m " Aprire adesso la finestra di controllo (windows\app.bat)? [S/N, S fra 20s] "
+if not errorlevel 2 start "" "%INSTALL_DIR%\windows\app.bat"
 goto :end
 
 rem ============================ FUNZIONI =====================================
