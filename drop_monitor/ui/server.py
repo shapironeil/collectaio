@@ -99,6 +99,59 @@ class UIState:
             out["monitor_running"] = self.controller.running
         return out
 
+    # ---- proxies -----------------------------------------------------------
+    def _proxy_store(self):
+        from drop_monitor.proxies import ResultStore
+
+        base = Path(self.cfg.path).parent if self.cfg.path else Path(".")
+        return ResultStore(base / "data" / "proxy-tests.json")
+
+    def proxies(self) -> dict:
+        from drop_monitor.proxies import entries_from_config, mask_proxy
+
+        raw = read_raw(self.cfg.path)
+        net = raw.get("network") or {}
+        entries = entries_from_config(net.get("proxies"))
+        results = self._proxy_store()
+        return {
+            "proxy_mode": net.get("proxy_mode", "off"), "monitor_group": net.get("monitor_group", ""),
+            "groups": sorted({e.group for e in entries} | {"default"}),
+            "entries": [{"url": e.url, "masked": mask_proxy(e.url), "group": e.group, "enabled": e.enabled, "label": e.label, "test": results.get(e.url)} for e in entries],
+        }
+
+    def put_proxies(self, body: dict) -> dict:
+        entries = []
+        for e in body.get("entries") or []:
+            if isinstance(e, dict) and str(e.get("url", "")).strip():
+                entries.append({"url": str(e["url"]).strip(), "group": str(e.get("group") or "default"), "enabled": bool(e.get("enabled", True)), "label": str(e.get("label") or "")})
+        net = {"proxies": entries}
+        if "proxy_mode" in body:
+            net["proxy_mode"] = body["proxy_mode"]
+        if "monitor_group" in body:
+            net["monitor_group"] = body["monitor_group"] or ""
+        save_config(self.cfg.path, {"network": net}, self.profiles.env_file)
+        if self.controller is not None:
+            self.controller.reload()
+            self.cfg = self.controller.cfg
+        return self.proxies()
+
+    def import_proxies(self, body: dict) -> dict:
+        from drop_monitor.proxies import mask_proxy, parse_proxy_list
+
+        urls, errors = parse_proxy_list(body.get("text") or "", body.get("scheme") or "http")
+        return {"urls": urls, "masked": [mask_proxy(u) for u in urls], "errors": errors}
+
+    def test_proxies(self, body: dict) -> dict:
+        from drop_monitor.proxies import entries_from_config, test_many
+
+        urls = body.get("urls")
+        if body.get("all") or not urls:
+            urls = [e.url for e in entries_from_config((read_raw(self.cfg.path).get("network") or {}).get("proxies"))]
+        target = body.get("target") or (self.site + "/")
+        results = test_many(list(urls), target, timeout=float(body.get("timeout") or 12), ip_service=None if body.get("no_ip") else "https://api.ipify.org")
+        self._proxy_store().update(results)
+        return {"results": [r.__dict__ for r in results]}
+
     def modules(self) -> dict:
         cur = module_for(self.site)
         return {"modules": [m.to_dict() for m in all_modules()], "current": cur.key if cur else None}
@@ -301,6 +354,8 @@ def make_handler(state: UIState):
                     self._json(state.get_config())
                 elif path == "/api/modules":
                     self._json(state.modules())
+                elif path == "/api/proxies":
+                    self._json(state.proxies())
                 elif path == "/api/update/check":
                     self._json(state.update_check())
                 elif path == "/api/register/captcha":
@@ -335,6 +390,12 @@ def make_handler(state: UIState):
                     self._json(state.put_config(body))
                 elif path == "/api/quick-task":
                     self._json(state.quick_task(body))
+                elif path == "/api/proxies":
+                    self._json(state.put_proxies(body))
+                elif path == "/api/proxies/import":
+                    self._json(state.import_proxies(body))
+                elif path == "/api/proxies/test":
+                    self._json(state.test_proxies(body))
                 elif path == "/api/update/apply":
                     self._json(state.update_apply())
                 elif path == "/api/restart":

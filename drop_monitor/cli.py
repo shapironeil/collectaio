@@ -137,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if ok else 1
 
     fetcher = Fetcher(cfg.polling.user_agent, cfg.polling.timeout_seconds, cfg.polling.accept_language, cfg.polling.respect_robots,
-                      proxies=cfg.network.proxies, proxy_mode=cfg.network.proxy_mode)
+                      proxies=cfg.network.urls(cfg.network.monitor_group), proxy_mode=cfg.network.proxy_mode)
 
     if args.cmd == "probe":
         if args.file:
@@ -177,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
         confirmer = TelegramConfirmer(tg) if tg else None
         order_runner = OrderRunner(_site_base(cfg), cfg.polling.user_agent, ProfileStore(base / "personal", base / ".env"), store,
                                    confirmer=confirmer, notify=(notifier.send if notifier else None), sessions_dir=base / "personal" / "sessions",
-                                   proxies=cfg.network.proxies if cfg.network.proxy_mode == "sticky" else None)
+                                   proxies=cfg.network.urls() if cfg.network.proxy_mode == "sticky" else None)
     monitor = Monitor(cfg, store, fetcher, notifier, dry_run=dry, order_runner=order_runner)
 
     if args.cmd == "once":

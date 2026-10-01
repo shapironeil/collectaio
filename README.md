@@ -124,6 +124,12 @@ captcha), **Moduli** (procedure studiate per sito e generatore account in teoria
 run, monitor, task, proxy, notifiche), **Impostazioni** (aggiornamenti, monitor, proxy, notifiche, preferenze).
 In alto: Avvia, Dry-run, Stop e avvio programmato all'orario del drop.
 
+**Proxy** (sezione dedicata): import in qualsiasi formato (`host:porta`, `host:porta:user:pass`, `user:pass@host:porta`,
+URL http/socks5), gruppi, abilita/disabilita, test di massa con latenza e IP visto, rimozione dei morti, modalità
+`rotate` per il monitor e `sticky` per profilo negli ordini, gruppo per task. Il test fa una richiesta vera attraverso
+il proxy; i test automatici usano un proxy locale reale per provare che le richieste lo attraversano. SOCKS5 è supportato
+(dipendenza `socksio`).
+
 **Dry-run** = prova a secco: tutto come vero ma senza l'azione irreversibile (niente notifiche nel monitor, niente
 conferma dell'ordine). **Run** = esecuzione reale.
 

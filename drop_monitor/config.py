@@ -63,8 +63,15 @@ class NotifyConfig:
 
 @dataclass
 class NetworkConfig:
-    proxies: list[str] = field(default_factory=list)  # http://user:pass@host:port or socks5://...
+    proxies: list = field(default_factory=list)  # strings or {url, group, enabled, label}; see drop_monitor.proxies
     proxy_mode: str = "off"  # off | rotate (monitor: one proxy per request) | sticky (one proxy per buyer profile)
+    monitor_group: str = ""  # proxy group used by the monitor ("" = all enabled)
+    entries: list = field(default_factory=list)  # parsed ProxyEntry list (filled by parse_config)
+
+    def urls(self, group: str = "") -> list[str]:
+        from drop_monitor.proxies import enabled_urls
+
+        return enabled_urls(self.entries, group)
 
 
 @dataclass
@@ -205,10 +212,15 @@ def parse_config(raw: dict, path: str | None = None) -> Config:
     network = _build(NetworkConfig, raw.get("network"), "network")
     if network.proxy_mode not in ("off", "rotate", "sticky"):
         raise ConfigError("network.proxy_mode must be off, rotate or sticky")
-    network.proxies = [str(x).strip() for x in (network.proxies or []) if str(x).strip()]
-    for px in network.proxies:
-        if not px.startswith(("http://", "https://", "socks5://", "socks5h://")):
-            raise ConfigError(f"network.proxies: '{px}' must start with http://, https:// or socks5://")
+    from drop_monitor.proxies import ProxyFormatError, entries_from_config, parse_proxy_line
+
+    network.entries = entries_from_config(network.proxies)
+    for e in network.entries:
+        try:
+            e.url = parse_proxy_line(e.url)
+        except ProxyFormatError as ex:
+            raise ConfigError(f"network.proxies: {ex}")
+    network.proxies = [e.url for e in network.entries]
 
     tasks: list[Task] = []
     labels = {w.label for w in watches} | {w.keywords for w in watches}

@@ -57,7 +57,13 @@ def save_config(path: str | os.PathLike, body: dict, env_path: str | os.PathLike
                 raise ConfigError(f"'{section}' must be a mapping")
             merged = {**current, **{k: v for k, v in value.items() if not k.startswith("has_")}}
             if section == "network" and isinstance(merged.get("proxies"), list):
-                merged["proxies"] = [str(x).strip() for x in merged["proxies"] if str(x).strip()]
+                cleaned = []
+                for x in merged["proxies"]:
+                    if isinstance(x, dict) and str(x.get("url", "")).strip():
+                        cleaned.append({k: v for k, v in x.items() if k in ("url", "group", "enabled", "label")})
+                    elif isinstance(x, str) and x.strip():
+                        cleaned.append(x.strip())
+                merged["proxies"] = cleaned
             raw[section] = merged
     # secrets: non-empty -> .env, YAML keeps the placeholder; empty -> keep what is there
     env_updates: dict[str, str] = {}

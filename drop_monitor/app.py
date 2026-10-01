@@ -65,14 +65,16 @@ class MonitorController:
             base = Path(cfg.path).parent if cfg.path else Path(".")
             self.notifier = None if dry_run else build_notifier(cfg)
             self.fetcher = Fetcher(cfg.polling.user_agent, cfg.polling.timeout_seconds, cfg.polling.accept_language, cfg.polling.respect_robots,
-                                   proxies=cfg.network.proxies, proxy_mode=cfg.network.proxy_mode)
+                                   proxies=cfg.network.urls(cfg.network.monitor_group), proxy_mode=cfg.network.proxy_mode)
             confirmer = TelegramConfirmer(self.notifier.telegram) if self.notifier and self.notifier.telegram else None
             runner = None
             if any(t.mode == "auto_checkout" and t.enabled for t in cfg.tasks):
                 runner = OrderRunner(site_base(cfg), cfg.polling.user_agent, ProfileStore(base / "personal", base / ".env"), self.store,
                                      confirmer=confirmer, notify=(self.notifier.send if self.notifier else None),
                                      sessions_dir=base / "personal" / "sessions",
-                                     proxies=cfg.network.proxies if cfg.network.proxy_mode == "sticky" else None)
+                                     proxies=cfg.network.urls() if cfg.network.proxy_mode == "sticky" else None)
+            if runner is not None:
+                runner.proxy_entries = cfg.network.entries if cfg.network.proxy_mode == "sticky" else []
             self.monitor = Monitor(cfg, self.store, self.fetcher, self.notifier, dry_run=dry_run, order_runner=runner)
             if self.notifier and self.notifier.telegram and cfg.telegram.commands:
                 self.bot = CommandBot(self.notifier.telegram, self.store, self.monitor.info, confirmer=confirmer)

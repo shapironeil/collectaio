@@ -70,7 +70,7 @@ def test_save_config_rejects_invalid_and_keeps_file(cfg_dir):
     with pytest.raises(ConfigError, match="min_seconds"):
         save_config(cfg_dir / "config.yaml", {"polling": {"min_seconds": 90, "max_seconds": 30}}, cfg_dir / ".env")
     with pytest.raises(ConfigError, match="proxies"):
-        save_config(cfg_dir / "config.yaml", {"network": {"proxies": ["1.2.3.4:80"]}}, cfg_dir / ".env")
+        save_config(cfg_dir / "config.yaml", {"network": {"proxies": ["questo-non-e-un-proxy"]}}, cfg_dir / ".env")
     with pytest.raises(ConfigError, match="bot_token"):
         save_config(cfg_dir / "config.yaml", {"telegram": {"enabled": True}}, cfg_dir / ".env")
     assert (cfg_dir / "config.yaml").read_text() == before and not (cfg_dir / ".env").exists()

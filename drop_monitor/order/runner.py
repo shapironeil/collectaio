@@ -47,6 +47,7 @@ class OrderRunner:
     def __init__(self, base_url: str, user_agent: str, profiles, store, confirmer: Confirmer | None = None, notify=None, sessions_dir="personal/sessions", probe_dir: str | None = None, proxies: list[str] | None = None):
         self.base_url = base_url
         self.proxies = list(proxies or [])  # sticky: profile i uses proxy i (mod len)
+        self.proxy_entries = []  # optional ProxyEntry list for per-task groups
         self.ua = user_agent
         self.profiles = profiles  # ProfileStore
         self.store = store
@@ -95,9 +96,12 @@ class OrderRunner:
             res.message = f"profilo non caricabile: {e}"
             return res
         proxy = None
-        if self.proxies:
+        pool = self.proxies
+        if task.proxy_group and self.proxy_entries:
+            pool = [e.url for e in self.proxy_entries if e.enabled and e.group == task.proxy_group] or pool
+        if pool:
             idx = task.profiles.index(profile_name) if profile_name in task.profiles else 0
-            proxy = self.proxies[idx % len(self.proxies)]
+            proxy = pool[idx % len(pool)]
             res.log("proxy", True, proxy.split("@")[-1])
         session = ShopSession(self.base_url, profile, self.ua, self.sessions_dir, probe=prober, proxy=proxy)
         try:

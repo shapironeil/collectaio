@@ -20,6 +20,7 @@ class Task:
     payment_method: str = ""  # substring of the option label/system name; empty = first offered
     enabled: bool = True
     max_checkouts: int = 0  # stop after N placed/pending orders for this task (0 = no cap)
+    proxy_group: str = ""  # proxy group for this task's sessions ("" = all enabled, sticky per profile)
 
 
 @dataclass
