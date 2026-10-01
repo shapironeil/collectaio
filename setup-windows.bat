@@ -304,8 +304,9 @@ if "%PY_IS_PORTABLE%"=="1" (
     set "VPY=%INSTALL_DIR%\.venv\Scripts\python.exe"
 )
 "%VPY%" -m pip install --quiet --upgrade pip >nul 2>&1
-"%VPY%" -m pip install --quiet -r requirements.txt -r requirements-dev.txt || (popd & goto :fail_venv)
-"%VPY%" -m pip install --quiet -e . || (popd & goto :fail_venv)
+echo       installo le dipendenze ^(puo' richiedere 1-2 minuti^) ...
+"%VPY%" -m pip install --quiet --no-warn-script-location -r requirements.txt -r requirements-dev.txt || (popd & goto :fail_venv)
+"%VPY%" -m pip install --quiet --no-warn-script-location -e . || (popd & goto :fail_venv)
 "%VPY%" -c "import drop_monitor, httpx, yaml, bs4, lxml" || (popd & goto :fail_venv)
 popd
 echo       OK
