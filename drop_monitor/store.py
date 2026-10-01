@@ -47,6 +47,17 @@ CREATE TABLE IF NOT EXISTS seen_products (
     first_seen TEXT NOT NULL,
     last_seen  TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS orders (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts        TEXT NOT NULL,
+    task      TEXT NOT NULL,
+    profile   TEXT NOT NULL,
+    product   TEXT,
+    status    TEXT NOT NULL,
+    total_eur REAL,
+    order_url TEXT,
+    note      TEXT
+);
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
@@ -158,6 +169,20 @@ class Store:
     def seen_count(self) -> int:
         with self._lock:
             return int(self._conn.execute("SELECT COUNT(*) FROM seen_products").fetchone()[0])
+
+    # --- orders -------------------------------------------------------------
+    def add_order(self, task: str, profile: str, product: str | None, status: str, total_eur: float | None, order_url: str | None, note: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO orders (ts, task, profile, product, status, total_eur, order_url, note) VALUES (?,?,?,?,?,?,?,?)",
+                (utcnow(), task, profile, product, status, total_eur, order_url, note),
+            )
+            self._conn.commit()
+
+    def recent_orders(self, limit: int = 20) -> list[dict]:
+        with self._lock:
+            rows = self._conn.execute("SELECT * FROM orders ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        return [dict(r) for r in rows]
 
     # --- meta ---------------------------------------------------------------
     def set_meta(self, key: str, value) -> None:

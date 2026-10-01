@@ -72,6 +72,9 @@ class UIState:
                 for t in self.store.all_tracked()
             ],
             "events": self.store.recent_events(15),
+            "tasks": [{"name": t.name, "product": t.product, "profiles": t.profiles, "quantity": t.quantity, "mode": t.mode,
+                       "max_total_eur": t.max_total_eur, "confirm_on_telegram": t.confirm_on_telegram, "enabled": t.enabled} for t in self.cfg.tasks],
+            "orders": self.store.recent_orders(15),
             "seen": self.store.seen_count(),
             "telegram": {"enabled": self.cfg.telegram.enabled, "chat_id": self.cfg.telegram.chat_id[-4:].rjust(len(self.cfg.telegram.chat_id), "*") if self.cfg.telegram.chat_id else ""},
         }

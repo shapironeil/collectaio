@@ -49,6 +49,19 @@ def _build_parser() -> argparse.ArgumentParser:
     ui.add_argument("--host", default="127.0.0.1")
     ui.add_argument("--no-browser", action="store_true")
 
+    order = sub.add_parser("order", help="run a checkout task now (dry-run unless --live)")
+    order.add_argument("--task", required=True, help="task name from config.yaml")
+    order.add_argument("--profile", help="only this profile (default: all profiles of the task)")
+    order.add_argument("--product-id", help="shop product id; default: the id the monitor has seen for the task's product")
+    order.add_argument("--live", action="store_true", help="really place the order (after limits and confirmation)")
+    order.add_argument("--probe", action="store_true", help="save every page of the run under data/probes/ for study")
+    order.add_argument("--console-confirm", action="store_true", help="confirm on the console instead of Telegram")
+
+    login = sub.add_parser("login", help="test the shop login of a buyer profile")
+    login.add_argument("--profile", default="default")
+
+    sub.add_parser("orders", help="print the order history")
+
     sub.add_parser("status", help="print the tracked state from the database")
     sub.add_parser("healthcheck", help="exit 0 if the monitor heartbeat is fresh")
     sub.add_parser("test-telegram", help="send a test message to the configured chat")
@@ -83,6 +96,15 @@ def main(argv: list[str] | None = None) -> int:
             httpd.server_close()
             store.close()
         return 0
+
+    if args.cmd == "orders":
+        store = Store(cfg.storage.db_path)
+        for r in store.recent_orders(30):
+            print(f"{r['ts']} {r['task']:15} {r['profile']:10} {r['status']:16} {r['total_eur'] or '':>8} {r['product'] or ''} {r['note'] or ''} {r['order_url'] or ''}")
+        return 0
+
+    if args.cmd in ("login", "order"):
+        return _run_order_commands(args, cfg)
 
     if args.cmd == "status":
         store = Store(cfg.storage.db_path)
@@ -124,7 +146,21 @@ def main(argv: list[str] | None = None) -> int:
     store = Store(cfg.storage.db_path)
     dry = bool(getattr(args, "dry_run", False))
     tg = Telegram(cfg.telegram.bot_token, cfg.telegram.chat_id) if cfg.telegram.enabled and not dry else None
-    monitor = Monitor(cfg, store, fetcher, tg, dry_run=dry)
+    order_runner = None
+    confirmer = None
+    if any(t.mode == "auto_checkout" and t.enabled for t in cfg.tasks):
+        from pathlib import Path
+
+        from drop_monitor.notifier import TelegramConfirmer
+        from drop_monitor.order.runner import OrderRunner
+        from drop_monitor.profile import ProfileStore
+        from drop_monitor.ui.server import _site_base
+
+        base = Path(cfg.path).parent if cfg.path else Path(".")
+        confirmer = TelegramConfirmer(tg) if tg else None
+        order_runner = OrderRunner(_site_base(cfg), cfg.polling.user_agent, ProfileStore(base / "personal", base / ".env"), store,
+                                   confirmer=confirmer, notify=(tg.send if tg else None), sessions_dir=base / "personal" / "sessions")
+    monitor = Monitor(cfg, store, fetcher, tg, dry_run=dry, order_runner=order_runner)
 
     if args.cmd == "once":
         results = monitor.run_once(delay=args.delay)
@@ -138,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
 
     bot = None
     if tg is not None and cfg.telegram.commands:
-        bot = CommandBot(tg, store, monitor.info)
+        bot = CommandBot(tg, store, monitor.info, confirmer=confirmer)
         bot.start()
     try:
         monitor.run_forever()
@@ -150,3 +186,70 @@ def main(argv: list[str] | None = None) -> int:
             tg.close()
         store.close()
     return 0
+
+
+def _run_order_commands(args, cfg) -> int:
+    from pathlib import Path
+
+    from drop_monitor.order.runner import Confirmer, OrderRunner, Prober
+    from drop_monitor.order.session import LoginError, ShopSession
+    from drop_monitor.profile import ProfileStore
+    from drop_monitor.state import watch_key
+    from drop_monitor.ui.server import _site_base
+
+    base = Path(cfg.path).parent if cfg.path else Path(".")
+    profiles = ProfileStore(base / "personal", base / ".env")
+    site = _site_base(cfg)
+    sessions_dir = base / "personal" / "sessions"
+
+    if args.cmd == "login":
+        try:
+            prof = profiles.load(args.profile)
+            s = ShopSession(site, prof, cfg.polling.user_agent, sessions_dir)
+            s.login()
+            ok = s.is_logged_in()
+            s.close()
+            print(f"login profilo '{args.profile}' ({prof['account'].get('email')}): {'OK' if ok else 'FALLITO'}")
+            return 0 if ok else 1
+        except LoginError as e:
+            print(f"login fallito: {e}")
+            return 1
+
+    task = next((t for t in cfg.tasks if t.name == args.task), None)
+    if task is None:
+        print(f"task '{args.task}' non trovato in config.yaml (tasks)", file=sys.stderr)
+        return 2
+    store = Store(cfg.storage.db_path)
+    watch = next((w for w in cfg.watches if task.product in (w.label, w.keywords)), None)
+    tracked = store.get_tracked(watch_key(watch)) if watch else None
+    product_id = args.product_id or (tracked.product_id if tracked else None)
+    title = (tracked.title if tracked and tracked.title else task.product)
+    if not product_id:
+        print("id prodotto sconosciuto: il monitor non l'ha ancora visto; passa --product-id", file=sys.stderr)
+        return 2
+    tg = None
+    confirmer = Confirmer()
+    bot = None
+    if cfg.telegram.enabled and not args.console_confirm:
+        from drop_monitor.notifier import Telegram, TelegramConfirmer
+        from drop_monitor.telegram_bot import CommandBot
+
+        tg = Telegram(cfg.telegram.bot_token, cfg.telegram.chat_id)
+        confirmer = TelegramConfirmer(tg)
+        bot = CommandBot(tg, store, lambda: {}, confirmer=confirmer)
+        bot.start()
+    runner = OrderRunner(site, cfg.polling.user_agent, profiles, store, confirmer=confirmer,
+                         notify=(tg.send if tg else lambda t: print(t)), sessions_dir=sessions_dir,
+                         probe_dir=str(base / "data" / "probes") if args.probe else None)
+    mode = "LIVE" if args.live else "DRY-RUN (nessun ordine inviato)"
+    print(f"task {task.name} · prodotto {title} (id {product_id}) · profili {task.profiles} · {mode}")
+    results = runner.run_task(task, product_id, title, dry_run=not args.live, only_profile=args.profile)
+    for r in results:
+        print(f"\n== profilo {r.profile}: {r.status} {('%.2f €' % r.total_eur) if r.total_eur is not None else ''} {r.message}")
+        for st in r.steps:
+            print(f"   {'OK ' if st.ok else 'KO '} {st.step}: {st.detail}")
+        if r.order_url:
+            print(f"   link: {r.order_url}")
+    if bot:
+        bot.stop()
+    return 0 if results and all(r.status in ("placed", "pending_payment", "dry_run") for r in results) else 1

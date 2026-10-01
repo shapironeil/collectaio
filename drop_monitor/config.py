@@ -10,6 +10,7 @@ from typing import Any
 import yaml
 
 from drop_monitor.matching import Watch
+from drop_monitor.order.models import Task
 
 _ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
 SOURCE_TYPES = ("auto", "category", "search", "product", "rss", "shopify")
@@ -72,6 +73,7 @@ class StorageConfig:
 class Config:
     sources: list[Source]
     watches: list[Watch]
+    tasks: list[Task] = field(default_factory=list)
     track_product_pages: bool = True
     polling: PollingConfig = field(default_factory=PollingConfig)
     telegram: TelegramConfig = field(default_factory=TelegramConfig)
@@ -193,9 +195,24 @@ def parse_config(raw: dict, path: str | None = None) -> Config:
     if telegram.enabled and (not telegram.bot_token or not telegram.chat_id):
         raise ConfigError("telegram.bot_token and telegram.chat_id are required (or set telegram.enabled: false)")
 
+    tasks: list[Task] = []
+    labels = {w.label for w in watches} | {w.keywords for w in watches}
+    for i, t in enumerate(raw.get("tasks") or []):
+        task = _build(Task, t, f"tasks[{i}]")
+        if task.product not in labels:
+            raise ConfigError(f"tasks[{i}].product '{task.product}' does not match any products[].keywords/name")
+        if task.mode not in ("monitor", "auto_checkout"):
+            raise ConfigError(f"tasks[{i}].mode must be 'monitor' or 'auto_checkout'")
+        if task.quantity < 1:
+            raise ConfigError(f"tasks[{i}].quantity must be >= 1")
+        if isinstance(task.profiles, str):
+            task.profiles = [task.profiles]
+        tasks.append(task)
+
     return Config(
         sources=sources,
         watches=watches,
+        tasks=tasks,
         track_product_pages=bool(site.get("track_product_pages", True)),
         polling=polling,
         telegram=telegram,

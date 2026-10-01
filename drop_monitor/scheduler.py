@@ -64,8 +64,9 @@ class StepResult:
 
 
 class Monitor:
-    def __init__(self, config: Config, store: Store, fetcher: Fetcher, telegram: Telegram | None, dry_run: bool = False):
+    def __init__(self, config: Config, store: Store, fetcher: Fetcher, telegram: Telegram | None, dry_run: bool = False, order_runner=None):
         self.cfg = config
+        self.order_runner = order_runner  # OrderRunner or None: auto-checkout tasks fire on AVAILABLE
         self.store = store
         self.fetcher = fetcher
         self.tg = telegram
@@ -270,8 +271,30 @@ class Monitor:
         if t.changed:
             log.info("STATE %s: %s -> %s (%s)", t.watch.label, t.old_state.value if t.old_state else None, t.new_state.value, t.reason)
             self._notify(format_transition(t))
+            if t.new_state == State.AVAILABLE:
+                self._fire_tasks(t)
         elif t.price_changed and self.cfg.notify.on_price_change:
             self._notify(format_price_change(t))
+
+    def _fire_tasks(self, t: Transition) -> None:
+        """Start auto-checkout tasks bound to this product (one background thread per task)."""
+        if self.order_runner is None:
+            return
+        pid = t.tracked.product_id
+        for task in self.cfg.tasks:
+            if not task.enabled or task.mode != "auto_checkout" or task.product not in (t.watch.label, t.watch.keywords):
+                continue
+            if not pid:
+                log.warning("task %s: product id unknown, cannot add to cart", task.name)
+                continue
+            log.info("task %s: product available, starting checkout for profiles %s", task.name, task.profiles)
+            threading.Thread(
+                target=self.order_runner.run_task,
+                args=(task, pid, t.tracked.title or t.watch.label),
+                kwargs={"dry_run": self.dry_run},
+                name=f"order-{task.name}",
+                daemon=True,
+            ).start()
 
     def _notify(self, text: str) -> None:
         if self.dry_run or self.tg is None:

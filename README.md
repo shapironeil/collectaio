@@ -108,6 +108,9 @@ Lo studio completo del modulo di registrazione (campi, token, province, esiti) �
 | `drop-monitor once [--dry-run] [--delay 3]` | una scansione completa (ogni sorgente + ogni pagina prodotto una volta), stampa stato ed esce. Ideale per i test |
 | `drop-monitor probe URL [--type …] [--file saved.html]` | scarica (o legge da file) e mostra cosa vede il parser e quali prodotti matchano |
 | `drop-monitor ui [--port 8765] [--no-browser]` | finestra di controllo locale |
+| `drop-monitor order --task NOME [--profile P] [--live] [--probe]` | checkout di un task (dry-run senza `--live`) |
+| `drop-monitor login --profile P` | prova il login del profilo sul negozio |
+| `drop-monitor orders` | storico ordini |
 | `drop-monitor status` | stato e ultimi eventi dal database |
 | `drop-monitor healthcheck` | exit 0 se l'heartbeat è fresco |
 | `drop-monitor test-telegram` | invia un messaggio di prova |
@@ -190,13 +193,21 @@ drop_monitor/
   account.py        studio del modulo di registrazione nopCommerce, payload, invio, login
   profile.py        profili acquirente multipli (personal/), password in .env
   ui/               finestra glass: server HTTP locale + static/index.html
+  order/            fase 2: sessione per profilo, carrello, one-page checkout, runner con limiti e conferma
 tests/              pytest + fixtures reali
 docs/site-analysis.md
 ```
 
-## Roadmap (fase 2, "come Cyber AIO ma meglio")
+## Fase 2: motore ordini
 
-Il monitor e la finestra sono la base del sistema multi-ordine: profili multipli, account registrati dalla finestra,
-login senza captcha, id prodotto ed endpoint add-to-cart già noti. Restano da studiare carrello e checkout
-(`/it/cart`, `/onepagecheckout`), i metodi di pagamento e i limiti di quantità. "Meglio" per noi significa anche:
-una richiesta per volta, backoff, nessun captcha risolto da macchine, conferma su Telegram prima di ogni ordine.
+`tasks:` in `config.yaml` lega un prodotto osservato a quantità, profili e modalità. In `auto_checkout`,
+appena il monitor vede il prodotto disponibile parte il checkout per ogni profilo: login, carrello,
+one-page checkout fino al riepilogo, limite di spesa, conferma con bottoni su Telegram, invio.
+Prova senza rischi con `drop-monitor order --task NOME` (dry-run, si ferma al riepilogo) e `--probe`
+per salvare le pagine. Dettagli, flusso e limiti in [`docs/phase2.md`](docs/phase2.md).
+
+## Roadmap
+
+Prossimi passi: verificare il checkout con un account vero (`order --probe`), modificare i task dalla finestra,
+statistiche ordini. Principi che restano: una richiesta per volta, backoff, nessun captcha risolto da macchine,
+conferma umana prima di ogni ordine.

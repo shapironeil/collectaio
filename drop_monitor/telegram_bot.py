@@ -59,11 +59,12 @@ def build_status(store: Store, monitor_info: dict | None = None) -> str:
 
 
 class CommandBot(threading.Thread):
-    def __init__(self, tg: Telegram, store: Store, info_provider):
+    def __init__(self, tg: Telegram, store: Store, info_provider, confirmer=None):
         super().__init__(name="telegram-commands", daemon=True)
         self._tg = tg
         self._store = store
         self._info = info_provider
+        self._confirmer = confirmer
         self._stop = threading.Event()
         self._offset: int | None = None
 
@@ -81,6 +82,14 @@ class CommandBot(threading.Thread):
                 continue
             for upd in updates:
                 self._offset = upd["update_id"] + 1
+                cb = upd.get("callback_query")
+                if cb:
+                    chat_id = str(((cb.get("message") or {}).get("chat") or {}).get("id", ""))
+                    if chat_id != self._tg.chat_id or self._confirmer is None:
+                        self._tg.answer_callback(cb["id"], "non autorizzato")
+                        continue
+                    self._tg.answer_callback(cb["id"], self._confirmer.resolve(cb.get("data", "")))
+                    continue
                 msg = upd.get("message") or {}
                 chat_id = str((msg.get("chat") or {}).get("id", ""))
                 text = (msg.get("text") or "").strip()
@@ -94,7 +103,11 @@ class CommandBot(threading.Thread):
     def _handle(self, cmd: str, chat_id: str) -> None:
         if cmd == "/status":
             self._tg.send(build_status(self._store, self._info()), chat_id=chat_id, disable_preview=True)
+        elif cmd == "/orders":
+            rows = self._store.recent_orders(10)
+            text = "🧾 <b>Ultimi ordini</b>\n" + ("\n".join(f"{_ago(r['ts'])} · {_esc(r['task'])}/{_esc(r['profile'])} · <b>{_esc(r['status'])}</b> {r['total_eur'] or ''}€ {_esc(r['note'] or '')}" for r in rows) if rows else "Nessun ordine ancora.")
+            self._tg.send(text, chat_id=chat_id, disable_preview=True)
         elif cmd == "/ping":
             self._tg.send("pong 🏓", chat_id=chat_id)
         elif cmd in ("/help", "/start"):
-            self._tg.send("Comandi: /status — stato prodotti e monitor\n/ping — test\n/help — questo messaggio", chat_id=chat_id)
+            self._tg.send("Comandi: /status — stato prodotti e monitor\n/orders — ultimi ordini\n/ping — test\n/help — questo messaggio", chat_id=chat_id)

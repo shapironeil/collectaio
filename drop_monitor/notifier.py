@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import html
 import logging
+import threading
+import time
 from datetime import datetime, timezone
 
 import httpx
@@ -34,13 +36,15 @@ class Telegram:
     def close(self) -> None:
         self._client.close()
 
-    def send(self, text: str, chat_id: str | None = None, disable_preview: bool = False) -> bool:
+    def send(self, text: str, chat_id: str | None = None, disable_preview: bool = False, reply_markup: dict | None = None) -> bool:
         payload = {
             "chat_id": chat_id or self.chat_id,
             "text": text[:4000],
             "parse_mode": "HTML",
             "disable_web_page_preview": disable_preview,
         }
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
         try:
             r = self._client.post(f"{self._base}/sendMessage", json=payload)
             if r.status_code != 200:
@@ -51,8 +55,14 @@ class Telegram:
             log.error("telegram sendMessage error: %s", e)
             return False
 
+    def answer_callback(self, callback_id: str, text: str = "") -> None:
+        try:
+            self._client.post(f"{self._base}/answerCallbackQuery", json={"callback_query_id": callback_id, "text": text[:200]})
+        except httpx.HTTPError as e:
+            log.warning("answerCallbackQuery failed: %s", e)
+
     def get_updates(self, offset: int | None, timeout: int = 30) -> list[dict]:
-        params = {"timeout": timeout, "allowed_updates": '["message"]'}
+        params = {"timeout": timeout, "allowed_updates": '["message","callback_query"]'}
         if offset is not None:
             params["offset"] = offset
         r = self._client.get(f"{self._base}/getUpdates", params=params)
@@ -101,3 +111,40 @@ def format_price_change(t: Transition) -> str:
         f"{_esc(t.old_price)} → <b>{_esc(tr.price)}</b> ({_esc(STATE_LABEL[t.new_state])})\n"
         f'🔗 <a href="{_esc(tr.url or "")}">Pagina prodotto</a>'
     )
+
+
+class TelegramConfirmer:
+    """Asks on Telegram with Conferma/Annulla buttons; the command bot resolves the answer."""
+
+    def __init__(self, tg: Telegram):
+        self.tg = tg
+        self._pending: dict[str, dict] = {}
+        self._lock = threading.Lock()
+        self._seq = 0
+
+    def ask(self, text: str, timeout: int) -> bool | None:
+        with self._lock:
+            self._seq += 1
+            qid = f"ord{self._seq}-{int(time.time())}"
+            entry = {"event": threading.Event(), "answer": None}
+            self._pending[qid] = entry
+        markup = {"inline_keyboard": [[
+            {"text": "✅ Conferma ordine", "callback_data": f"confirm:{qid}"},
+            {"text": "❌ Annulla", "callback_data": f"cancel:{qid}"},
+        ]]}
+        self.tg.send(_esc(text) + f"\n\n⏳ Rispondi entro {timeout // 60} min, altrimenti l'ordine NON viene inviato.", reply_markup=markup)
+        entry["event"].wait(timeout)
+        with self._lock:
+            self._pending.pop(qid, None)
+        return entry["answer"]
+
+    def resolve(self, data: str) -> str:
+        """Called by the bot for callback_data 'confirm:<id>' / 'cancel:<id>'. Returns feedback text."""
+        action, _, qid = data.partition(":")
+        with self._lock:
+            entry = self._pending.get(qid)
+        if entry is None:
+            return "Richiesta scaduta o già gestita"
+        entry["answer"] = action == "confirm"
+        entry["event"].set()
+        return "Ordine confermato, invio in corso" if entry["answer"] else "Ordine annullato"

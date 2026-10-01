@@ -51,3 +51,21 @@ storage:
   log_level: INFO
   health_path: data/health.json
   health_max_age_seconds: 300          # healthcheck fails if no heartbeat for this long
+
+# ---------------------------------------------------------------------------
+# FASE 2 - task di acquisto (come i "tasks" di Cyber AIO: prodotto x quantita' x profili)
+# Un task in modalita' auto_checkout parte da solo quando il monitor vede il prodotto
+# DISPONIBILE: login col profilo, carrello, checkout fino al riepilogo, controllo del
+# limite di spesa, conferma su Telegram (bottoni), poi invio dell'ordine.
+# Provalo prima senza rischi:  drop-monitor order --task minitin   (dry-run: si ferma al riepilogo)
+tasks:
+  - name: minitin
+    product: "Pokemon 30 Anniversario Mini Tin Case ITA"   # = products[].keywords (o name)
+    profiles: [default]            # un ordine per profilo, in sequenza (personal/profiles/*.yaml)
+    quantity: 1
+    mode: monitor                  # monitor | auto_checkout
+    max_total_eur: 150             # totale ordine (spedizione inclusa) oltre cui NON si conferma
+    confirm_on_telegram: true      # chiede conferma con bottoni prima di inviare l'ordine
+    confirm_timeout_seconds: 300   # senza risposta: ordine non inviato
+    shipping_method: ""            # parte del nome del metodo (vuoto = quello proposto dal sito)
+    payment_method: "PayPal"       # parte del nome (PayPal/bonifico/contrassegno); carte non supportate
