@@ -9,6 +9,8 @@ Verified on gemcardinfinitycollection.it (Oct 2026), see docs/site-analysis.md:
   _2 Partita IVA, _6 Codice SDI, _7 PEC, _3 "Come ci hai conosciuto?" (radio 1..8)
 * an image captcha (CaptchaMvc): <img src="/DefaultCaptcha/Generate?t=HASH">, hidden CaptchaDeText=HASH,
   answer in CaptchaInputText. A human must read it: this module never tries to solve it.
+  The generator answers with a red-cross placeholder unless the request carries the Referer of the
+  registration page; POST /DefaultCaptcha/Refresh {t, __m__:0} returns jQuery code with the new token.
 * three consent checkboxes (accept-privacy-policy / -termini / -registrazione) enforced client-side only.
 * POST to the same URL. Success redirects to /it/registerresult/{1|2|3} (standard / admin approval /
   e-mail validation) or straight to returnurl; failure re-renders the form with validation errors.
@@ -264,7 +266,10 @@ class AccountClient:
     def captcha_image(self) -> tuple[bytes, str]:
         if not self.form or not self.form.captcha_image_url:
             raise AccountError("no captcha on the current form")
-        r = self._client.get(self.form.captcha_image_url)
+        r = self._client.get(
+            self.form.captcha_image_url,
+            headers={"Referer": self.form.action, "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8"},
+        )
         r.raise_for_status()
         return r.content, r.headers.get("Content-Type", "image/gif")
 
@@ -272,12 +277,17 @@ class AccountClient:
         """Ask the site for a new image for the same token (what the page's refresh link does)."""
         if not self.form or not self.form.captcha_token:
             raise AccountError("no captcha on the current form")
-        r = self._client.post(f"{self.base_url}/DefaultCaptcha/Refresh", data={"t": self.form.captcha_token, "__m__": "0"})
+        r = self._client.post(
+            f"{self.base_url}/DefaultCaptcha/Refresh",
+            data={"t": self.form.captcha_token, "__m__": "0"},
+            headers={"Referer": self.form.action, "X-Requested-With": "XMLHttpRequest"},
+        )
         r.raise_for_status()
-        new_token = r.text.strip().strip('"')
-        if re.fullmatch(r"[0-9a-f]{32}", new_token):  # some versions answer with the new token
-            self.form.captcha_token = new_token
-            self.form.captcha_image_url = f"{self.base_url}/DefaultCaptcha/Generate?t={new_token}"
+        # Answer is jQuery code: $('#CaptchaDeText').attr("value", "<token>"); $('#CaptchaImage').attr("src", ...)
+        m = re.search(r"CaptchaDeText[^;]*?([0-9a-f]{32})", r.text) or re.search(r"([0-9a-f]{32})", r.text)
+        if m:
+            self.form.captcha_token = m.group(1)
+            self.form.captcha_image_url = f"{self.base_url}/DefaultCaptcha/Generate?t={m.group(1)}"
 
     def states(self, country_id: int | str) -> list[dict]:
         r = self._client.get(f"{self.base_url}{STATES_PATH}", params={"countryId": country_id, "addSelectStateItem": "true"})
