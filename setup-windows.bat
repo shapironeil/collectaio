@@ -473,7 +473,7 @@ set "TRIES=0"
 :ensure_token_loop
 call :check_token
 if "!TOKEN_STATUS!"=="ok" (
-    if "!TOKEN_SAVED!"=="0" call :save_token
+    if "!TOKEN_SAVED!"=="0" if defined GITHUB_TOKEN call :save_token
     if "%REMOTE_VER%"=="-" call :fetch_remote_version
     exit /b 0
 )
@@ -499,7 +499,15 @@ set "TOKEN_STATUS=none"
 set "TOKEN_USER=-"
 set "CODES="
 if not defined TOKEN_SAVED set "TOKEN_SAVED=1"
-if not defined GITHUB_TOKEN exit /b 0
+if defined GITHUB_TOKEN goto :check_token_auth
+rem Senza token: se il repository e' pubblico non serve nulla.
+for /f %%c in ('powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
+  "try { $r=Invoke-WebRequest -Uri 'https://api.github.com/repos/%REPO%' -Headers @{'User-Agent'='drop-monitor-setup'} -UseBasicParsing; [int]$r.StatusCode } catch { if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 } }"') do set "PUBCODE=%%c"
+if "%PUBCODE%"=="200" (set "TOKEN_STATUS=ok" & set "TOKEN_USER=anonimo" & echo       repository pubblico: nessun token necessario)
+if "%PUBCODE%"=="0" set "TOKEN_STATUS=offline"
+exit /b 0
+:check_token_auth
 set "TOKEN_STATUS=offline"
 for /f "tokens=1,2" %%a in ('powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
