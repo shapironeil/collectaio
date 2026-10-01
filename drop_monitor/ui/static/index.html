@@ -299,7 +299,6 @@ async function loadStatus(){
   $('#orders').innerHTML = status.orders.length ? status.orders.map(o=>`<div class="row"><div><div class="t" style="font-size:13px">${esc(o.task)} / ${esc(o.profile)}</div><div class="m">${esc(o.product||'')} · ${o.total_eur?o.total_eur+' €':''} · ${esc(o.note||'')}${o.order_url?` · <a href="${esc(o.order_url)}" target="_blank" rel="noopener">link</a>`:''}</div></div><span class="pill ${o.status==='placed'||o.status==='pending_payment'?'available':(o.status==='dry_run'?'':'present_unavailable')}">${esc(o.status)}</span></div>`).join('') : '<div class="note">Nessun ordine ancora.</div>';
   $('#sources').innerHTML = status.sources.map(s=>`<div class="row"><div><div class="t" style="font-size:13px">${esc(s.type)}</div><div class="m"><code>${esc(s.url)}</code></div></div></div>`).join('');
   $('#polling').innerHTML = `<div>Intervallo</div><div>${status.polling.min}–${status.polling.max} s</div><div>Hot ratio</div><div>${status.polling.hot_ratio} pagine prodotto per ogni lista</div><div>Telegram</div><div>${status.telegram.enabled?'attivo · chat '+esc(status.telegram.chat_id):'disattivato'}</div>`;
-  $('#cfg').innerHTML = `<div>Sito</div><div><code>${esc(status.site)}</code></div><div>Health</div><div>${esc(status.health.message)}</div><div>Tasks</div><div>${status.watches.length}</div><div>Sorgenti</div><div>${status.sources.length}</div><div>Telegram</div><div>${status.telegram.enabled?'attivo':'off'}</div>`;
 }
 $('#refresh').onclick=()=>{loadStatus();toast('Aggiornato')};
 
