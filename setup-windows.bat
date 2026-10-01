@@ -77,8 +77,11 @@ if "%CHECK_ONLY%"=="1" (
     set "INSTALL_DIR=%SELF_DIR%\drop-monitor"
 )
 if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
-if exist "%INSTALL_DIR%\setup.local.bat" call "%INSTALL_DIR%\setup.local.bat"
+set "TOKEN_SRC=nessuno"
+if exist "%SELF_DIR%\setup.local.bat" set "TOKEN_SRC=%SELF_DIR%\setup.local.bat"
+if exist "%INSTALL_DIR%\setup.local.bat" (call "%INSTALL_DIR%\setup.local.bat" & set "TOKEN_SRC=%INSTALL_DIR%\setup.local.bat")
 if not "%DROP_MONITOR_BRANCH%"=="" set "BRANCH=%DROP_MONITOR_BRANCH%"
+if not defined GITHUB_TOKEN set "TOKEN_SRC=nessuno"
 set "GIT_TERMINAL_PROMPT=0"
 set "GCM_INTERACTIVE=never"
 rem Tutto resta dentro la cartella: temporanei e cache pip compresi.
@@ -97,10 +100,10 @@ echo  repo    : https://github.com/%REPO%  (branch %BRANCH%)
 echo  cartella: %INSTALL_DIR%
 echo.
 set "OLD_DIR=%USERPROFILE%\drop-monitor"
-for /f "delims=" %%b in ('powershell -NoProfile -Command "[uri]::EscapeDataString('%BRANCH%')"') do set "BRANCH_ENC=%%b"
 
 rem ============================ 0/7 VERSIONE E PULIZIA =======================
 echo [0/7] Stato installazione e pulizia residui ...
+if defined GITHUB_TOKEN (echo       token GitHub: caricato da %TOKEN_SRC%) else (echo       token GitHub: nessuno ^(cercato in %SELF_DIR%\setup.local.bat e %INSTALL_DIR%\setup.local.bat^))
 set "INSTALLED_VER=-"
 set "INSTALLED_SHA=-"
 if exist "%INSTALL_DIR%\drop_monitor\__init__.py" (
@@ -112,7 +115,7 @@ if exist "%INSTALL_DIR%\drop_monitor\__init__.py" (
 )
 set "REMOTE_VER=-"
 set "VER_TMP=%SYS_TEMP%\drop-monitor-version-%STAMP%.py"
-call :download "https://api.github.com/repos/%REPO%/contents/drop_monitor/__init__.py?ref=%BRANCH_ENC%" "%VER_TMP%" 10 "application/vnd.github.raw" >nul 2>&1
+call :download "https://api.github.com/repos/%REPO%/contents/drop_monitor/__init__.py?ref=%BRANCH%" "%VER_TMP%" 10 "application/vnd.github.raw" >nul 2>&1
 if exist "%VER_TMP%" (
     for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
     del /q "%VER_TMP%" >nul 2>&1
@@ -229,8 +232,10 @@ rem ============================ 4/7 CODICE ===================================
 echo [4/7] Scarico/aggiorno il codice ...
 set "OLD_SHA=-"
 set "NEW_SHA=-"
+if not defined GITHUB_TOKEN call :ask_token
 set "GIT_AUTH="
 if defined GITHUB_TOKEN set GIT_AUTH=-c "http.extraheader=AUTHORIZATION: bearer %GITHUB_TOKEN%"
+if not defined GITHUB_TOKEN echo       nessun token: il repository privato non sara' scaricabile
 if "%HAVE_GIT%"=="1" if exist "%INSTALL_DIR%\.git" goto :update_git
 if "%HAVE_GIT%"=="1" goto :clone_git
 goto :download_zip
@@ -260,7 +265,7 @@ goto :code_ok
 :download_zip
 set "ZIP=%TEMP%\drop-monitor-%STAMP%.zip"
 set "UNZ=%TEMP%\drop-monitor-unzip-%STAMP%"
-set "ZIP_URL=https://api.github.com/repos/%REPO%/zipball/%BRANCH_ENC%"
+set "ZIP_URL=https://api.github.com/repos/%REPO%/zipball/%BRANCH%"
 echo       scarico %ZIP_URL%
 call :download "%ZIP_URL%" "%ZIP%" 10000
 if errorlevel 1 goto :fail_download
@@ -482,7 +487,7 @@ if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 )
 echo       token salvato in %INSTALL_DIR%\setup.local.bat
 set "VER_TMP=%SYS_TEMP%\drop-monitor-version-%STAMP%.py"
-call :download "https://api.github.com/repos/%REPO%/contents/drop_monitor/__init__.py?ref=%BRANCH_ENC%" "%VER_TMP%" 10 "application/vnd.github.raw" >nul 2>&1
+call :download "https://api.github.com/repos/%REPO%/contents/drop_monitor/__init__.py?ref=%BRANCH%" "%VER_TMP%" 10 "application/vnd.github.raw" >nul 2>&1
 if exist "%VER_TMP%" (
     for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
     del /q "%VER_TMP%" >nul 2>&1
