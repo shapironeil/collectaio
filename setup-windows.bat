@@ -34,7 +34,9 @@ rem  SHA256 dove il produttore lo pubblica) prima di essere usato.
 rem
 rem  Variabili opzionali (impostale prima di lanciare, o in setup.local.bat):
 rem    DROP_MONITOR_BRANCH   branch da scaricare (default sotto)
-rem    GITHUB_TOKEN          token GitHub se il repository e' privato e git manca
+rem    GITHUB_TOKEN          token GitHub: OBBLIGATORIO finche' il repository e' privato
+rem                          (fine-grained, permesso "Contents: Read" sul repo). Il bat lo
+rem                          chiede una volta e lo salva in <cartella>\setup.local.bat
 rem    PORTABLE_PYTHON=0     usa il Python di sistema (venv) invece del portable
 rem    PORTABLE_NODE=1       scarica anche Node.js portable
 rem ============================================================================
@@ -75,6 +77,10 @@ if "%CHECK_ONLY%"=="1" (
     set "INSTALL_DIR=%SELF_DIR%\drop-monitor"
 )
 if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+if exist "%INSTALL_DIR%\setup.local.bat" call "%INSTALL_DIR%\setup.local.bat"
+if not "%DROP_MONITOR_BRANCH%"=="" set "BRANCH=%DROP_MONITOR_BRANCH%"
+set "GIT_TERMINAL_PROMPT=0"
+set "GCM_INTERACTIVE=never"
 rem Tutto resta dentro la cartella: temporanei e cache pip compresi.
 set "SYS_TEMP=%TEMP%"
 set "TEMP=%INSTALL_DIR%\_tmp"
@@ -110,8 +116,9 @@ if exist "%VER_TMP%" (
     for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
     del /q "%VER_TMP%" >nul 2>&1
 )
+if "%REMOTE_VER%"=="-" if "%CHECK_ONLY%"=="0" call :ask_token
 if "%REMOTE_VER%"=="-" (
-    echo       versione disponibile: non verificabile ^(GitHub non raggiungibile o repo privato^)
+    echo       versione disponibile: non verificabile ^(GitHub non raggiungibile o token mancante^)
 ) else if "%REMOTE_VER%"=="%INSTALLED_VER%" (
     echo       disponibile sul branch %BRANCH%: %REMOTE_VER% ^(stessa versione, verifico comunque il commit^)
 ) else (
@@ -221,6 +228,9 @@ rem ============================ 4/7 CODICE ===================================
 echo [4/7] Scarico/aggiorno il codice ...
 set "OLD_SHA=-"
 set "NEW_SHA=-"
+set "GIT_AUTH="
+if defined GITHUB_TOKEN set GIT_AUTH=-c "http.extraheader=AUTHORIZATION: bearer %GITHUB_TOKEN%"
+for /f "delims=" %%b in ('powershell -NoProfile -Command "[uri]::EscapeDataString('%BRANCH%')"') do set "BRANCH_ENC=%%b"
 if "%HAVE_GIT%"=="1" if exist "%INSTALL_DIR%\.git" goto :update_git
 if "%HAVE_GIT%"=="1" goto :clone_git
 goto :download_zip
@@ -228,7 +238,7 @@ goto :download_zip
 :update_git
 pushd "%INSTALL_DIR%"
 for /f %%s in ('"%GIT%" rev-parse --short HEAD 2^>nul') do set "OLD_SHA=%%s"
-"%GIT%" fetch --quiet origin "%BRANCH%" || (popd & goto :fail_download)
+"%GIT%" %GIT_AUTH% fetch origin "%BRANCH%" || (popd & echo       git fetch fallito: passo allo zip & goto :download_zip)
 rem I file personali non sono tracciati: reset --hard non li tocca.
 "%GIT%" checkout --quiet -B "%BRANCH%" "origin/%BRANCH%" || (popd & goto :fail_download)
 "%GIT%" reset --quiet --hard "origin/%BRANCH%" || (popd & goto :fail_download)
@@ -240,7 +250,7 @@ goto :code_ok
 :clone_git
 rem Cartella esistente senza .git (es. installata da zip): clono a parte e sincronizzo.
 set "TMP_CLONE=%TEMP%\drop-monitor-clone-%STAMP%"
-"%GIT%" clone --quiet --depth 1 --branch "%BRANCH%" "https://github.com/%REPO%.git" "%TMP_CLONE%" || goto :fail_download
+"%GIT%" %GIT_AUTH% clone --depth 1 --branch "%BRANCH%" "https://github.com/%REPO%.git" "%TMP_CLONE%" || (echo       git clone fallito: passo allo zip & goto :download_zip)
 call :sync_from "%TMP_CLONE%"
 for /f %%s in ('"%GIT%" -C "%TMP_CLONE%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
 rmdir /s /q "%TMP_CLONE%" >nul 2>&1
@@ -250,7 +260,7 @@ goto :code_ok
 :download_zip
 set "ZIP=%TEMP%\drop-monitor-%STAMP%.zip"
 set "UNZ=%TEMP%\drop-monitor-unzip-%STAMP%"
-set "ZIP_URL=https://github.com/%REPO%/archive/refs/heads/%BRANCH%.zip"
+set "ZIP_URL=https://api.github.com/repos/%REPO%/zipball/%BRANCH_ENC%"
 echo       scarico %ZIP_URL%
 call :download "%ZIP_URL%" "%ZIP%" 10000
 if errorlevel 1 goto :fail_download
@@ -446,10 +456,40 @@ exit /b 0
 rem :download URL DEST MIN_BYTES  -> errorlevel 1 se fallisce o file troppo piccolo
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
-  "$h=@{}; if ($env:GITHUB_TOKEN -and '%~1'.Contains('github.com')) { $h['Authorization']='Bearer '+$env:GITHUB_TOKEN };" ^
+  "$h=@{'User-Agent'='drop-monitor-setup'}; if ($env:GITHUB_TOKEN -and '%~1'.Contains('github')) { $h['Authorization']='Bearer '+$env:GITHUB_TOKEN };" ^
   "Invoke-WebRequest -Uri '%~1' -Headers $h -OutFile '%~2' -UseBasicParsing;" ^
   "if ((Get-Item '%~2').Length -lt %~3) { throw 'file troppo piccolo: download incompleto' }"
 if errorlevel 1 (echo       download fallito: %~1 & exit /b 1)
+exit /b 0
+
+:ask_token
+rem Il repository e' privato: senza token GitHub risponde 404 e git resterebbe in attesa di credenziali.
+if defined GITHUB_TOKEN (
+    echo       il token GitHub salvato non funziona ^(scaduto o senza permesso Contents: Read^)
+) else (
+    echo       il repository %REPO% e' privato: serve un token GitHub.
+)
+echo       Crealo su https://github.com/settings/personal-access-tokens ^(Fine-grained, repo %REPO%, Contents: Read^).
+set "NEW_TOKEN="
+set /p "NEW_TOKEN=      Incolla il token e premi INVIO (INVIO vuoto per continuare senza): "
+if "%NEW_TOKEN%"=="" exit /b 0
+set "GITHUB_TOKEN=%NEW_TOKEN%"
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+> "%INSTALL_DIR%\setup.local.bat" (
+    echo @echo off
+    echo rem Impostazioni locali di setup-windows.bat ^(file personale, preservato dagli aggiornamenti^)
+    echo set "GITHUB_TOKEN=%NEW_TOKEN%"
+)
+echo       token salvato in %INSTALL_DIR%\setup.local.bat
+set "VER_TMP=%SYS_TEMP%\drop-monitor-version-%STAMP%.py"
+call :download "https://raw.githubusercontent.com/%REPO%/%BRANCH%/drop_monitor/__init__.py" "%VER_TMP%" 10 >nul 2>&1
+if exist "%VER_TMP%" (
+    for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
+    del /q "%VER_TMP%" >nul 2>&1
+    echo       token verificato
+) else (
+    echo       ATTENZIONE: anche con il token GitHub risponde errore: controlla permessi e repository
+)
 exit /b 0
 
 :unzip
@@ -513,7 +553,9 @@ echo ERRORE: impossibile creare %INSTALL_DIR%
 goto :fail
 :fail_download
 echo ERRORE: download/aggiornamento del codice fallito.
-echo  - repository privato senza git? imposta GITHUB_TOKEN oppure installa git: https://git-scm.com/download/win
+echo  - il repository e' privato: serve un token GitHub valido ^(Contents: Read^).
+echo    Rilancia il setup e incollalo quando richiesto, oppure scrivilo in
+echo    %INSTALL_DIR%\setup.local.bat come:  set "GITHUB_TOKEN=github_pat_..."
 echo  - branch inesistente? cambia BRANCH in testa a questo file o DROP_MONITOR_BRANCH
 goto :fail
 :fail_verify

@@ -67,8 +67,10 @@ di esecuzioni interrotte (temporanei in `%TEMP%`, backup vuoti) e, se trova la v
 migra i dati personali e la elimina (chiede conferma se conteneva dati). `setup-windows.bat check` fa solo il controllo
 senza modificare nulla. Poi il codice viene sincronizzato dal branch, mentre `config.yaml`, `.env`, `data\`,
 `personal\`, `portable\` e `.venv\` non vengono mai toccati e, per sicurezza, i file personali sono copiati in `_backup\<data-ora>\` (ultimi 5).
-Variabili opzionali: `DROP_MONITOR_BRANCH` (branch da scaricare), `GITHUB_TOKEN` (repo privato senza git); puoi
-metterle in `setup.local.bat` accanto allo script.
+Il repository è **privato**: al primo avvio il bat chiede un token GitHub (fine-grained, permesso *Contents: Read* su
+questo repo, da https://github.com/settings/personal-access-tokens) e lo salva in `drop-monitor\setup.local.bat`,
+preservato dagli aggiornamenti. Senza token GitHub risponde 404 e git non può scaricare. Altre variabili:
+`DROP_MONITOR_BRANCH` (branch da scaricare), `PORTABLE_PYTHON=0`, `PORTABLE_NODE=1`.
 
 Poi: `windows\test.bat` (test + scansione reale senza notifiche), `windows\start.bat` (avvio in finestra),
 `windows\ui.bat` (finestra di controllo), `windows\autostart.bat` (attività pianificata all'accesso, `autostart.bat remove` per toglierla).
