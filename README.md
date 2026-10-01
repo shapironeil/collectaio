@@ -62,7 +62,10 @@ Ogni download è controllato (dimensione minima, eseguibile che risponde, hash d
 `PORTABLE_PYTHON=0` usa invece il Python di sistema in un `.venv`. Alla fine esegue i test offline e crea `config.yaml`,
 `.env` e `personal\order-profile.yaml` dai template.
 
-**Rilancialo per aggiornare**: il codice viene sincronizzato dal branch, mentre `config.yaml`, `.env`, `data\`,
+**Rilancialo per aggiornare**: prima mostra versione installata e versione disponibile sul branch, rimuove i residui
+di esecuzioni interrotte (temporanei in `%TEMP%`, backup vuoti) e, se trova la vecchia posizione `%USERPROFILE%\drop-monitor`,
+migra i dati personali e la elimina (chiede conferma se conteneva dati). `setup-windows.bat check` fa solo il controllo
+senza modificare nulla. Poi il codice viene sincronizzato dal branch, mentre `config.yaml`, `.env`, `data\`,
 `personal\`, `portable\` e `.venv\` non vengono mai toccati e, per sicurezza, i file personali sono copiati in `_backup\<data-ora>\` (ultimi 5).
 Variabili opzionali: `DROP_MONITOR_BRANCH` (branch da scaricare), `GITHUB_TOKEN` (repo privato senza git); puoi
 metterle in `setup.local.bat` accanto allo script.

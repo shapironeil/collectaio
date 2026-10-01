@@ -3,12 +3,17 @@ rem ============================================================================
 rem  drop-monitor - installazione / aggiornamento su Windows
 rem
 rem  Uso:  setup-windows.bat [cartella_installazione]
+rem        setup-windows.bat check     -> solo controllo: versione installata,
+rem                                       versione disponibile, residui; non modifica nulla
 rem        Senza argomenti installa TUTTO in una sola cartella accanto a questo
 rem        file: <cartella del bat>\drop-monitor  (codice, runtime portable,
 rem        dipendenze, dati, backup, file temporanei). Se il bat sta gia' dentro
 rem        un'installazione, aggiorna quella. Niente viene scritto altrove.
 rem
 rem  Cosa fa, ogni volta che lo lanci:
+rem   0. pulisce i residui di esecuzioni interrotte (temporanei, backup vuoti) e
+rem      cerca una vecchia installazione in %USERPROFILE%\drop-monitor: i dati
+rem      personali vengono migrati qui, il resto rimosso
 rem   1. controlla Python 3.11+ (prova a installarlo con winget se manca)
 rem   2. controlla git (opzionale: senza git scarica lo zip da GitHub)
 rem   3. fa un backup dei file personali in _backup\<data-ora>\
@@ -57,7 +62,12 @@ set "PRESERVE_FILES=config.yaml .env setup.local.bat install-info.txt"
 rem --- cartella di installazione -------------------------------------------
 set "SELF_DIR=%~dp0"
 if "%SELF_DIR:~-1%"=="\" set "SELF_DIR=%SELF_DIR:~0,-1%"
-if not "%~1"=="" (
+set "CHECK_ONLY=0"
+if /i "%~1"=="check" set "CHECK_ONLY=1"
+if "%CHECK_ONLY%"=="1" (
+    set "INSTALL_DIR=%SELF_DIR%\drop-monitor"
+    if exist "%SELF_DIR%\drop_monitor\cli.py" set "INSTALL_DIR=%SELF_DIR%"
+) else if not "%~1"=="" (
     set "INSTALL_DIR=%~f1"
 ) else if exist "%SELF_DIR%\drop_monitor\cli.py" (
     set "INSTALL_DIR=%SELF_DIR%"
@@ -66,6 +76,7 @@ if not "%~1"=="" (
 )
 if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
 rem Tutto resta dentro la cartella: temporanei e cache pip compresi.
+set "SYS_TEMP=%TEMP%"
 set "TEMP=%INSTALL_DIR%\_tmp"
 set "TMP=%TEMP%"
 set "PIP_CACHE_DIR=%INSTALL_DIR%\portable\pip-cache"
@@ -79,6 +90,40 @@ echo  drop-monitor setup
 echo  repo    : https://github.com/%REPO%  (branch %BRANCH%)
 echo  cartella: %INSTALL_DIR%
 echo.
+set "OLD_DIR=%USERPROFILE%\drop-monitor"
+
+rem ============================ 0/7 VERSIONE E PULIZIA =======================
+echo [0/7] Stato installazione e pulizia residui ...
+set "INSTALLED_VER=-"
+set "INSTALLED_SHA=-"
+if exist "%INSTALL_DIR%\drop_monitor\__init__.py" (
+    for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%INSTALL_DIR%\drop_monitor\__init__.py"') do set "INSTALLED_VER=%%~v"
+    if exist "%INSTALL_DIR%\install-info.txt" for /f "tokens=2 delims==" %%v in ('findstr /b "commit=" "%INSTALL_DIR%\install-info.txt"') do set "INSTALLED_SHA=%%v"
+    echo       installata: versione !INSTALLED_VER! ^(commit !INSTALLED_SHA!^)
+) else (
+    echo       nessuna installazione in %INSTALL_DIR%: prima installazione
+)
+set "REMOTE_VER=-"
+set "VER_TMP=%SYS_TEMP%\drop-monitor-version-%STAMP%.py"
+call :download "https://raw.githubusercontent.com/%REPO%/%BRANCH%/drop_monitor/__init__.py" "%VER_TMP%" 10 >nul 2>&1
+if exist "%VER_TMP%" (
+    for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
+    del /q "%VER_TMP%" >nul 2>&1
+)
+if "%REMOTE_VER%"=="-" (
+    echo       versione disponibile: non verificabile ^(GitHub non raggiungibile o repo privato^)
+) else if "%REMOTE_VER%"=="%INSTALLED_VER%" (
+    echo       disponibile sul branch %BRANCH%: %REMOTE_VER% ^(stessa versione, verifico comunque il commit^)
+) else (
+    echo       disponibile sul branch %BRANCH%: %REMOTE_VER%  ^<-- aggiornamento
+)
+call :cleanup_leftovers
+call :migrate_old_install
+if "%CHECK_ONLY%"=="1" (
+    echo.
+    echo  Modalita' check: nessuna modifica eseguita.
+    goto :end
+)
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" || goto :fail_mkdir
 if not exist "%TEMP%" mkdir "%TEMP%"
 
@@ -189,7 +234,7 @@ rem I file personali non sono tracciati: reset --hard non li tocca.
 "%GIT%" reset --quiet --hard "origin/%BRANCH%" || (popd & goto :fail_download)
 for /f %%s in ('"%GIT%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
 popd
-if "%OLD_SHA%"=="%NEW_SHA%" (echo       gia' aggiornato: %NEW_SHA%) else (echo       aggiornato: %OLD_SHA% -^> %NEW_SHA%)
+if "%OLD_SHA%"=="%NEW_SHA%" (echo       gia' aggiornato: commit %NEW_SHA%) else (echo       aggiornato: commit %OLD_SHA% -^> %NEW_SHA%)
 goto :code_ok
 
 :clone_git
@@ -225,7 +270,7 @@ goto :code_ok
 if not exist "%INSTALL_DIR%\drop_monitor\cli.py" goto :fail_verify
 if not exist "%INSTALL_DIR%\requirements.txt" goto :fail_verify
 for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%INSTALL_DIR%\drop_monitor\__init__.py"') do set "APP_VER=%%~v"
-echo       versione app: %APP_VER%
+if "%INSTALLED_VER%"=="-" (echo       versione app: %APP_VER%) else if "%INSTALLED_VER%"=="%APP_VER%" (echo       versione app: %APP_VER% ^(invariata^)) else (echo       versione app: %INSTALLED_VER% -^> %APP_VER%)
 
 rem ============================ 5/7 DIPENDENZE ===============================
 pushd "%INSTALL_DIR%"
@@ -310,6 +355,61 @@ echo ===========================================================================
 goto :end
 
 rem ============================ FUNZIONI =====================================
+:cleanup_leftovers
+rem Residui di esecuzioni precedenti/interrotte, nel TEMP di sistema e nella cartella.
+set "N=0"
+for %%p in ("drop-monitor-*.zip" "drop-monitor-unzip-*" "drop-monitor-clone-*" "drop-monitor-*.log" "drop-monitor-version-*.py" "mingit-*.zip" "node-*.zip" "node-*.sha" "node-unz-*" "python-embed-*.zip" "get-pip-*.py") do (
+    for /f "delims=" %%f in ('dir /b /a-d "%SYS_TEMP%\%%~p" 2^>nul') do (
+        if "%CHECK_ONLY%"=="1" (echo       residuo: %SYS_TEMP%\%%f) else (del /q "%SYS_TEMP%\%%f" >nul 2>&1 && echo       rimosso: %SYS_TEMP%\%%f)
+        set /a N+=1
+    )
+    for /f "delims=" %%d in ('dir /b /ad "%SYS_TEMP%\%%~p" 2^>nul') do (
+        if "%CHECK_ONLY%"=="1" (echo       residuo: %SYS_TEMP%\%%d\) else (rmdir /s /q "%SYS_TEMP%\%%d" >nul 2>&1 && echo       rimosso: %SYS_TEMP%\%%d\)
+        set /a N+=1
+    )
+)
+if exist "%INSTALL_DIR%\_tmp" (
+    if "%CHECK_ONLY%"=="1" (echo       residuo: %INSTALL_DIR%\_tmp\) else (rmdir /s /q "%INSTALL_DIR%\_tmp" >nul 2>&1 && echo       rimosso: %INSTALL_DIR%\_tmp\)
+    set /a N+=1
+)
+rem backup vuoti (creati da un setup interrotto al passo 3)
+for /f "delims=" %%d in ('dir /b /ad "%INSTALL_DIR%\_backup" 2^>nul') do (
+    dir /b /s /a-d "%INSTALL_DIR%\_backup\%%d" 2>nul | findstr . >nul || (
+        if "%CHECK_ONLY%"=="1" (echo       backup vuoto: _backup\%%d) else (rmdir /s /q "%INSTALL_DIR%\_backup\%%d" >nul 2>&1 && echo       rimosso backup vuoto: _backup\%%d)
+        set /a N+=1
+    )
+)
+if "!N!"=="0" echo       nessun residuo trovato
+exit /b 0
+
+:migrate_old_install
+rem La prima versione del setup installava in %USERPROFILE%\drop-monitor.
+if /i "%OLD_DIR%"=="%INSTALL_DIR%" exit /b 0
+if not exist "%OLD_DIR%" exit /b 0
+echo       trovata vecchia posizione: %OLD_DIR%
+set "OLD_HAS_DATA=0"
+for %%f in (config.yaml .env setup.local.bat) do if exist "%OLD_DIR%\%%f" set "OLD_HAS_DATA=1"
+for %%d in (data personal) do if exist "%OLD_DIR%\%%d" (dir /b /s /a-d "%OLD_DIR%\%%d" 2>nul | findstr . >nul && set "OLD_HAS_DATA=1")
+if "%CHECK_ONLY%"=="1" (
+    if "!OLD_HAS_DATA!"=="1" (echo       contiene dati personali: verranno migrati qui al prossimo setup) else (echo       senza dati personali: verra' rimossa al prossimo setup)
+    exit /b 0
+)
+if "!OLD_HAS_DATA!"=="1" (
+    echo       migro i dati personali ^(solo se qui mancano^) ...
+    if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+    for %%f in (config.yaml .env setup.local.bat) do (
+        if exist "%OLD_DIR%\%%f" if not exist "%INSTALL_DIR%\%%f" copy /y "%OLD_DIR%\%%f" "%INSTALL_DIR%\" >nul && echo       migrato: %%f
+    )
+    for %%d in (data personal) do (
+        if exist "%OLD_DIR%\%%d" robocopy "%OLD_DIR%\%%d" "%INSTALL_DIR%\%%d" /E /XC /XN /XO /R:1 /W:1 /NFL /NDL /NJH /NJS /NP >nul && echo       migrato: %%d\
+    )
+    choice /c SN /n /m "      Eliminare la vecchia cartella %OLD_DIR% ? [S/N] "
+    if errorlevel 2 (echo       vecchia cartella mantenuta & exit /b 0)
+)
+rmdir /s /q "%OLD_DIR%" >nul 2>&1
+if exist "%OLD_DIR%" (echo       ATTENZIONE: impossibile rimuovere %OLD_DIR%) else (echo       rimossa vecchia cartella: %OLD_DIR%)
+exit /b 0
+
 :ensure_portable_python
 set "PP=%PORTABLE%\python"
 if exist "%PP%\python.exe" goto :pp_check
