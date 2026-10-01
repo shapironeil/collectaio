@@ -97,6 +97,7 @@ echo  repo    : https://github.com/%REPO%  (branch %BRANCH%)
 echo  cartella: %INSTALL_DIR%
 echo.
 set "OLD_DIR=%USERPROFILE%\drop-monitor"
+for /f "delims=" %%b in ('powershell -NoProfile -Command "[uri]::EscapeDataString('%BRANCH%')"') do set "BRANCH_ENC=%%b"
 
 rem ============================ 0/7 VERSIONE E PULIZIA =======================
 echo [0/7] Stato installazione e pulizia residui ...
@@ -111,7 +112,7 @@ if exist "%INSTALL_DIR%\drop_monitor\__init__.py" (
 )
 set "REMOTE_VER=-"
 set "VER_TMP=%SYS_TEMP%\drop-monitor-version-%STAMP%.py"
-call :download "https://raw.githubusercontent.com/%REPO%/%BRANCH%/drop_monitor/__init__.py" "%VER_TMP%" 10 >nul 2>&1
+call :download "https://api.github.com/repos/%REPO%/contents/drop_monitor/__init__.py?ref=%BRANCH_ENC%" "%VER_TMP%" 10 "application/vnd.github.raw" >nul 2>&1
 if exist "%VER_TMP%" (
     for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
     del /q "%VER_TMP%" >nul 2>&1
@@ -230,7 +231,6 @@ set "OLD_SHA=-"
 set "NEW_SHA=-"
 set "GIT_AUTH="
 if defined GITHUB_TOKEN set GIT_AUTH=-c "http.extraheader=AUTHORIZATION: bearer %GITHUB_TOKEN%"
-for /f "delims=" %%b in ('powershell -NoProfile -Command "[uri]::EscapeDataString('%BRANCH%')"') do set "BRANCH_ENC=%%b"
 if "%HAVE_GIT%"=="1" if exist "%INSTALL_DIR%\.git" goto :update_git
 if "%HAVE_GIT%"=="1" goto :clone_git
 goto :download_zip
@@ -453,10 +453,10 @@ set "PY_IS_PORTABLE=1"
 exit /b 0
 
 :download
-rem :download URL DEST MIN_BYTES  -> errorlevel 1 se fallisce o file troppo piccolo
+rem :download URL DEST MIN_BYTES [ACCEPT]  -> errorlevel 1 se fallisce o file troppo piccolo
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" ^
-  "$h=@{'User-Agent'='drop-monitor-setup'}; if ($env:GITHUB_TOKEN -and '%~1'.Contains('github')) { $h['Authorization']='Bearer '+$env:GITHUB_TOKEN };" ^
+  "$h=@{'User-Agent'='drop-monitor-setup'}; if ('%~4') { $h['Accept']='%~4' }; if ($env:GITHUB_TOKEN -and '%~1'.Contains('github')) { $h['Authorization']='Bearer '+$env:GITHUB_TOKEN };" ^
   "Invoke-WebRequest -Uri '%~1' -Headers $h -OutFile '%~2' -UseBasicParsing;" ^
   "if ((Get-Item '%~2').Length -lt %~3) { throw 'file troppo piccolo: download incompleto' }"
 if errorlevel 1 (echo       download fallito: %~1 & exit /b 1)
@@ -482,7 +482,7 @@ if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 )
 echo       token salvato in %INSTALL_DIR%\setup.local.bat
 set "VER_TMP=%SYS_TEMP%\drop-monitor-version-%STAMP%.py"
-call :download "https://raw.githubusercontent.com/%REPO%/%BRANCH%/drop_monitor/__init__.py" "%VER_TMP%" 10 >nul 2>&1
+call :download "https://api.github.com/repos/%REPO%/contents/drop_monitor/__init__.py?ref=%BRANCH_ENC%" "%VER_TMP%" 10 "application/vnd.github.raw" >nul 2>&1
 if exist "%VER_TMP%" (
     for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
     del /q "%VER_TMP%" >nul 2>&1
