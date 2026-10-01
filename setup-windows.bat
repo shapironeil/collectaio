@@ -40,6 +40,12 @@ rem                          chiede una volta e lo salva in <cartella>\setup.loc
 rem    PORTABLE_PYTHON=0     usa il Python di sistema (venv) invece del portable
 rem    PORTABLE_NODE=1       scarica anche Node.js portable
 rem ============================================================================
+rem Rilancia se stesso in una finestra che resta aperta anche in caso di errore (cmd /k).
+if not defined DROP_SETUP_INNER (
+    set "DROP_SETUP_INNER=1"
+    start "drop-monitor setup" cmd /k ""%~f0" %*"
+    exit /b 0
+)
 setlocal EnableExtensions EnableDelayedExpansion
 title drop-monitor setup
 
@@ -187,7 +193,7 @@ if "%HAVE_GIT%"=="1" goto :git_ok
 echo       nessun git: usero' lo zip di GitHub
 goto :git_done
 :git_ok
-for /f "tokens=3" %%v in ('"%GIT%" --version 2^>nul') do echo       OK: git %%v (%GIT%)
+for /f "tokens=3" %%v in ('call "%GIT%" --version 2^>nul') do echo       OK: git %%v - %GIT%
 if "%GIT%"=="git" goto :git_done
 set "PATH=%PORTABLE%\git\cmd;%PATH%"
 :git_done
@@ -242,12 +248,12 @@ goto :download_zip
 
 :update_git
 pushd "%INSTALL_DIR%"
-for /f %%s in ('"%GIT%" rev-parse --short HEAD 2^>nul') do set "OLD_SHA=%%s"
+for /f %%s in ('call "%GIT%" rev-parse --short HEAD 2^>nul') do set "OLD_SHA=%%s"
 "%GIT%" %GIT_AUTH% fetch origin "%BRANCH%" || (popd & echo       git fetch fallito: passo allo zip & goto :download_zip)
 rem I file personali non sono tracciati: reset --hard non li tocca.
 "%GIT%" checkout --quiet -B "%BRANCH%" "origin/%BRANCH%" || (popd & goto :fail_download)
 "%GIT%" reset --quiet --hard "origin/%BRANCH%" || (popd & goto :fail_download)
-for /f %%s in ('"%GIT%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
+for /f %%s in ('call "%GIT%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
 popd
 if "%OLD_SHA%"=="%NEW_SHA%" (echo       gia' aggiornato: commit %NEW_SHA%) else (echo       aggiornato: commit %OLD_SHA% -^> %NEW_SHA%)
 goto :code_ok
@@ -257,7 +263,7 @@ rem Cartella esistente senza .git (es. installata da zip): clono a parte e sincr
 set "TMP_CLONE=%TEMP%\drop-monitor-clone-%STAMP%"
 "%GIT%" %GIT_AUTH% clone --depth 1 --branch "%BRANCH%" "https://github.com/%REPO%.git" "%TMP_CLONE%" || (echo       git clone fallito: passo allo zip & goto :download_zip)
 call :sync_from "%TMP_CLONE%"
-for /f %%s in ('"%GIT%" -C "%TMP_CLONE%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
+for /f %%s in ('call "%GIT%" -C "%TMP_CLONE%" rev-parse --short HEAD 2^>nul') do set "NEW_SHA=%%s"
 rmdir /s /q "%TMP_CLONE%" >nul 2>&1
 echo       installato: %NEW_SHA%
 goto :code_ok
@@ -293,7 +299,7 @@ if "%PY_IS_PORTABLE%"=="1" (
     echo [5/7] Dipendenze nel Python portable ...
     set "VPY=%PORTABLE%\python\python.exe"
 ) else (
-    echo [5/7] Ambiente Python (.venv) e dipendenze ...
+    echo [5/7] Ambiente Python ^(.venv^) e dipendenze ...
     if not exist ".venv\Scripts\python.exe" %PY% -m venv .venv || (popd & goto :fail_venv)
     set "VPY=%INSTALL_DIR%\.venv\Scripts\python.exe"
 )
@@ -622,9 +628,9 @@ goto :fail
 :fail
 echo.
 if exist "%BACKUP_DIR%" echo  Backup dei file personali: %BACKUP_DIR%
-echo  Setup interrotto.
-pause
+echo  Setup interrotto. Copia il testo di questa finestra per la diagnosi.
 exit /b 1
 :end
-pause
+echo.
+echo  (puoi chiudere questa finestra)
 exit /b 0
