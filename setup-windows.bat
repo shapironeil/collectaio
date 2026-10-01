@@ -235,7 +235,7 @@ set "NEW_SHA=-"
 call :ensure_token
 set "GIT_AUTH="
 if defined GITHUB_TOKEN set GIT_AUTH=-c "http.extraheader=AUTHORIZATION: bearer %GITHUB_TOKEN%"
-if not defined GITHUB_TOKEN echo       nessun token: il repository privato non sara' scaricabile
+if not "!TOKEN_STATUS!"=="ok" echo       attenzione: nessun accesso verificato al repository, il download potrebbe fallire
 if "%HAVE_GIT%"=="1" if exist "%INSTALL_DIR%\.git" goto :update_git
 if "%HAVE_GIT%"=="1" goto :clone_git
 goto :download_zip
@@ -546,6 +546,21 @@ if exist "%VER_TMP%" (
     for /f "tokens=2 delims== " %%v in ('findstr /c:"__version__" "%VER_TMP%"') do set "REMOTE_VER=%%~v"
     del /q "%VER_TMP%" >nul 2>&1
 )
+exit /b 0
+
+:unzip
+rem :unzip ZIP DEST
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Expand-Archive -Path '%~1' -DestinationPath '%~2' -Force"
+if errorlevel 1 (echo       estrazione fallita: %~1 & exit /b 1)
+exit /b 0
+
+:verify_sha
+rem :verify_sha FILE SHASUMS_TXT NAME_IN_LIST
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$ErrorActionPreference='Stop'; $want=(Get-Content '%~2' | Where-Object { $_ -match '\s%~3$' }) -split '\s+' | Select-Object -First 1;" ^
+  "if (-not $want) { throw 'hash non trovato nella lista' }; $got=(Get-FileHash '%~1' -Algorithm SHA256).Hash.ToLower();" ^
+  "if ($got -ne $want.ToLower()) { throw ('SHA256 diverso: ' + $got) }"
+if errorlevel 1 exit /b 1
 exit /b 0
 
 :find_python
