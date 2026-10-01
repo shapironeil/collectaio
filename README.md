@@ -48,6 +48,22 @@ docker compose logs -f                  # oppure: tail -f data/drop-monitor.log
 * `HEALTHCHECK` Docker: `drop-monitor healthcheck` fallisce se non c'è heartbeat da `storage.health_max_age_seconds`
   (`docker inspect --format '{{.State.Health.Status}}' drop-monitor`). Con `restart: unless-stopped` un crash viene riavviato.
 
+### Su Windows (PC che farà anche gli ordini)
+
+Scarica solo [`setup-windows.bat`](setup-windows.bat) (tasto destro → "Salva link con nome" sulla versione *Raw*) e lancialo:
+installa in `%USERPROFILE%\drop-monitor` (o nella cartella passata come argomento), controlla Python 3.11+ (prova
+`winget` se manca), usa git se c'è altrimenti scarica lo zip da GitHub, crea il `.venv`, esegue i test e crea
+`config.yaml`, `.env` e `personal\order-profile.yaml` dai template.
+
+**Rilancialo per aggiornare**: il codice viene sincronizzato dal branch, mentre `config.yaml`, `.env`, `data\`,
+`personal\` e `.venv\` non vengono mai toccati e, per sicurezza, copiati in `_backup\<data-ora>\` (ultimi 5).
+Variabili opzionali: `DROP_MONITOR_BRANCH` (branch da scaricare), `GITHUB_TOKEN` (repo privato senza git); puoi
+metterle in `setup.local.bat` accanto allo script.
+
+Poi: `windows\test.bat` (test + scansione reale senza notifiche), `windows\start.bat` (avvio in finestra),
+`windows\autostart.bat` (attività pianificata all'accesso, `autostart.bat remove` per toglierla).
+Il `.env` accanto a `config.yaml` viene caricato automaticamente dall'app.
+
 ### Senza Docker
 
 ```bash

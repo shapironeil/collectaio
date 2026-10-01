@@ -109,10 +109,40 @@ def _build(cls, data: dict | None, name: str):
     return cls(**data)
 
 
+def load_dotenv(path: str | os.PathLike, override: bool = False) -> int:
+    """Load KEY=VALUE lines from a .env file into os.environ. Returns the number of keys set.
+
+    Docker Compose injects .env itself; this covers plain `drop-monitor run` on a PC.
+    Existing environment variables win unless `override` is True.
+    """
+    p = Path(path)
+    if not p.is_file():
+        return 0
+    count = 0
+    for line in p.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[7:].strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+            value = value[1:-1]
+        elif " #" in value:
+            value = value.split(" #", 1)[0].rstrip()
+        if key and (override or key not in os.environ):
+            os.environ[key] = value
+            count += 1
+    return count
+
+
 def load_config(path: str | os.PathLike) -> Config:
     p = Path(path)
     if not p.exists():
         raise ConfigError(f"config file not found: {p}")
+    load_dotenv(p.parent / ".env")  # same folder as config.yaml
     raw = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
     raw = _expand_env(raw)
     return parse_config(raw, path=str(p))

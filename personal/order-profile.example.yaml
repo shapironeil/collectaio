@@ -1,0 +1,33 @@
+# Profilo per la FASE 2 (ordini automatici). Copia in personal/order-profile.yaml.
+# Il file reale e' ignorato da git e preservato da setup-windows.bat a ogni aggiornamento.
+#
+# NON scrivere qui numeri di carta o CVV: la fase 2 usera' un metodo di pagamento
+# gia' salvato sull'account del negozio (es. PayPal) e la password va in .env
+# (ORDER_PASSWORD) o inserita a mano. Tienilo comunque solo su questo PC.
+
+account:
+  email: ""              # email dell'account sul negozio
+  password: "${ORDER_PASSWORD:-}"   # lascia cosi' e metti ORDER_PASSWORD in .env
+
+shipping:
+  first_name: ""
+  last_name: ""
+  company: ""
+  address1: ""
+  address2: ""
+  zip: ""
+  city: ""
+  province: ""           # sigla, es. MI
+  country: "Italia"
+  phone: ""
+
+billing:
+  same_as_shipping: true
+  fiscal_code: ""        # codice fiscale, se richiesto in fattura
+
+preferences:
+  max_quantity_per_order: 1
+  max_total_eur: 150     # oltre questo importo l'ordine NON viene inviato
+  shipping_method: ""    # nome esatto come appare al checkout (vuoto = il primo disponibile)
+  payment_method: ""     # es. "PayPal"
+  confirm_on_telegram: true   # chiedere conferma su Telegram prima di confermare l'ordine

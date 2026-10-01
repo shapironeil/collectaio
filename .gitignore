@@ -9,3 +9,8 @@ venv/
 data/
 config.yaml
 .env
+personal/*
+!personal/order-profile.example.yaml
+_backup/
+install-info.txt
+setup.local.bat

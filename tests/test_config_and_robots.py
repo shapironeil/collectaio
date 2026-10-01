@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from drop_monitor.config import ConfigError, load_config, parse_config
+from drop_monitor.config import ConfigError, load_config, load_dotenv, parse_config
 from drop_monitor.fetcher import _parse_retry_after
 from drop_monitor.health import check_health, write_health
 
@@ -84,3 +84,21 @@ def test_healthcheck_roundtrip(tmp_path):
     assert ok and "status=running" in msg
     write_health(str(path), status="stopped")
     assert check_health(str(path), 60)[0] is False
+
+
+def test_dotenv_next_to_config_is_loaded(tmp_path, monkeypatch):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "from-env")  # real environment wins over .env
+    (tmp_path / ".env").write_text(
+        "# comment\nTELEGRAM_BOT_TOKEN='tok:en'\nTELEGRAM_CHAT_ID=99\nexport EXTRA=\"x y\" \nBAD LINE\n", encoding="utf-8"
+    )
+    (tmp_path / "config.yaml").write_text(
+        "site:\n  url: https://shop.example/cat\nproducts: [\"x\"]\n"
+        "telegram:\n  bot_token: ${TELEGRAM_BOT_TOKEN}\n  chat_id: ${TELEGRAM_CHAT_ID}\n",
+        encoding="utf-8",
+    )
+    cfg = load_config(tmp_path / "config.yaml")
+    assert cfg.telegram.bot_token == "tok:en"
+    assert cfg.telegram.chat_id == "from-env"
+    assert os.environ["EXTRA"] == "x y"
+    assert load_dotenv(tmp_path / "missing.env") == 0
