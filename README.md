@@ -89,7 +89,7 @@ con sidebar come i bot AIO, pensata per diventare il pannello unico di monitor e
 | **Dashboard** | stato monitor, prodotti osservati con pill verde/ambra, eventi | checkout riusciti, analytics |
 | **Tasks** | i `products` di config.yaml, sorgenti, polling | task = prodotto + profilo + quantità + modalità auto-checkout |
 | **Profili** | profili multipli (account, spedizione, fatturazione, limiti di spesa); password solo in `.env` | un profilo per ogni ordine da replicare |
-| **Account** | registrazione assistita sul negozio: scarica il modulo, mostra il captcha, tu lo leggi, la finestra invia e verifica l'esito | login automatico (senza captcha) e sessione pronta al drop |
+| **Account** | registrazione assistita sul negozio: scarica il modulo, mostra il captcha (una domanda aritmetica, es. `74-29=?`), tu digiti il risultato, la finestra invia e verifica l'esito | login automatico (senza captcha) e sessione pronta al drop |
 | **Impostazioni** | configurazione attiva e guida | |
 
 Il server ascolta solo su `127.0.0.1` e rifiuta richieste da altre origini. Nessun captcha viene risolto in automatico.
