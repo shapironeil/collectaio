@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drop-monitor"
+version = "0.1.0"
+description = "Monitor an e-commerce site for product drops / restocks and notify via Telegram"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.27,<1.0",
+  "PyYAML>=6.0,<7.0",
+  "beautifulsoup4>=4.12,<5.0",
+  "lxml>=5.0,<7.0",
+]
+
+[project.scripts]
+drop-monitor = "drop_monitor.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["drop_monitor*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

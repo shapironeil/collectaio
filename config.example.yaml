@@ -1,0 +1,53 @@
+# drop-monitor configuration. Copy to config.yaml and edit.
+# Secrets can be written inline or injected from the environment with ${VAR} / ${VAR:-default}.
+
+site:
+  # Sources are polled one request per cycle, in turn. For nopCommerce shops the
+  # category page is the best discovery source (title + price + "Esaurito" overlay).
+  # The site's SmartSearch is disallowed in robots.txt for Googlebot and carries no
+  # stock information, so it is intentionally not listed here.
+  sources:
+    - type: category
+      url: https://www.gemcardinfinitycollection.it/it/pokemon-30%C2%BA-anniversario
+      follow_pagination: true          # 6 products/page on this shop -> one page per cycle
+    - type: rss                        # nopCommerce "new products" feed: catches brand-new listings
+      url: https://www.gemcardinfinitycollection.it/newproducts/rss
+  # Once a watched product has a known URL, poll its product page directly: on this
+  # shop the product page is the only reliable availability signal.
+  track_product_pages: true
+
+products:
+  - keywords: "Pokemon 30 Anniversario Mini Tin Case ITA"
+    exclude: ["casuale"]               # "Mini Tin Casuale" is a different product
+    # url: https://www.gemcardinfinitycollection.it/it/pokemon-30-anniversario-mini-tin-case-sealed-ita
+  - keywords: "Pokemon 30 Anniversario Bundle 6 Buste ITA"
+  # Optional per product: name (display label), url (exact page, strongest match),
+  # fuzzy: 0.85 (difflib ratio fallback for shop-side typos).
+
+polling:
+  min_seconds: 30                      # random interval in [min, max] between requests
+  max_seconds: 60
+  timeout_seconds: 20
+  backoff_base_seconds: 60             # doubles on each consecutive 429/5xx/network error
+  backoff_max_seconds: 900
+  respect_robots: true                 # skip URLs robots.txt disallows for our User-Agent
+  hot_ratio: 2                         # product-page polls per listing/feed poll
+  user_agent: "drop-monitor/0.1 (+https://github.com/shapironeil/collectaio; contact: you@example.com)"
+
+telegram:
+  bot_token: "${TELEGRAM_BOT_TOKEN}"
+  chat_id: "${TELEGRAM_CHAT_ID}"
+  enabled: true
+  commands: true                       # answer /status, /ping, /help on the chat above
+
+notify:
+  on_price_change: false               # state changes always notify; price-only changes are opt-in
+  startup_message: true
+  error_after_consecutive: 10          # warn on Telegram after N consecutive fetch errors (0 = never)
+
+storage:
+  db_path: data/drop-monitor.db
+  log_path: data/drop-monitor.log
+  log_level: INFO
+  health_path: data/health.json
+  health_max_age_seconds: 300          # healthcheck fails if no heartbeat for this long

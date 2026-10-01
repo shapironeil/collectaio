@@ -1,0 +1,23 @@
+services:
+  drop-monitor:
+    build: .
+    image: drop-monitor:latest
+    container_name: drop-monitor
+    restart: unless-stopped
+    # Run as your host user so the bind-mounted ./data stays writable (override PUID/PGID in .env).
+    user: "${PUID:-1000}:${PGID:-1000}"
+    env_file:
+      - .env            # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (see .env.example)
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data
+    # Keep the container tiny; the loop sleeps most of the time.
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
